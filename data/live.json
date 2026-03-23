@@ -1,19 +1,19 @@
 {
-  "as_of": "2026-03-23",
-  "generated_at_utc": "2026-03-23T00:00:00+00:00",
-  "sp500": 6506,
-  "ma200": 6621,
-  "vix": 27,
-  "creditSpreadBp": 327,
+  "as_of": "2026-03-07",
+  "generated_at_utc": "2026-03-23T06:24:40+00:00",
+  "sp500": 6506.48,
+  "ma200": 6621.73,
+  "vix": 24.06,
+  "creditSpreadBp": 3,
   "sos": 0.042,
-  "drawdownPct": 7.5,
-  "holdDaysAbove200": 214,
-  "polymarketRecessionProb": 35,
+  "drawdownPct": 6.77,
+  "holdDaysAbove200": 0,
+  "polymarketRecessionProb": null,
   "latestDates": {
-    "sp500": "2026-03-23",
-    "vix": "2026-03-23",
-    "spread": "2026-03-23",
-    "iursa": "2026-03-23"
+    "sp500": "2026-03-20",
+    "vix": "2026-03-19",
+    "spread": "2026-03-19",
+    "iursa": "2026-03-07"
   },
   "sources": {
     "sp500": "FRED SP500",
