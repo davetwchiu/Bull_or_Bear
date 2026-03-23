@@ -224,7 +224,10 @@ function updateDashboard() {
     const sos = parseFloat(document.getElementById('inputSOS').value) || 0;
     const t2108 = parseFloat(document.getElementById('inputT2108').value) || 0;
     const triggerReason = document.getElementById('triggerReason').value;
-    const stableStatus = document.getElementById('stableStatus').value;
+    const stableDays = parseInt(document.getElementById('inputStableDays').value) || 0;
+
+// 126 個交易日大約等於 6 個月
+const stableStatus = (stableDays >= 126) ? 'long' : 'short';
 
     let riskScore = 0; // 滿分 5.0
     let buyScore = 0;  // 滿分 3
