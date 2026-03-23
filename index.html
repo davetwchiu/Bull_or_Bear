@@ -3,434 +3,1030 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bull or Bear Dashboard</title>
+  <title>200天線風險儀表板｜互動版</title>
   <style>
     :root {
-      --bg: #0b1220;
+      --bg: #0f172a;
       --panel: #111827;
-      --panel2: #1f2937;
+      --panel-2: #1f2937;
       --text: #e5e7eb;
       --muted: #94a3b8;
+      --line: #334155;
       --good: #16a34a;
       --warn: #d97706;
       --bad: #dc2626;
-      --line: #334155;
       --blue: #2563eb;
+      --cyan: #0891b2;
     }
+
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", sans-serif;
-      background: linear-gradient(180deg, #08101d 0%, #111827 100%);
+      background: linear-gradient(180deg, #0b1220 0%, #111827 100%);
       color: var(--text);
     }
-    .wrap { max-width: 1280px; margin: 0 auto; padding: 20px; }
-    h1,h2,h3,p { margin: 0; }
-    .top { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
-    .top p { color: var(--muted); margin-top: 6px; }
-    .btns { display:flex; gap:10px; flex-wrap:wrap; }
-    button, a.btn {
-      background: var(--blue); color:#fff; border:0; border-radius:10px; padding:10px 14px;
-      text-decoration:none; cursor:pointer; font-size:14px;
+    .wrap {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px;
     }
-    button.secondary, a.btn.secondary { background:#334155; }
-    .grid { display:grid; grid-template-columns: 360px 1fr; gap:18px; }
-    @media (max-width: 1050px){ .grid { grid-template-columns: 1fr; } }
+    h1, h2, h3 { margin: 0 0 10px; }
+    p { margin: 0; line-height: 1.5; }
+
+    .topbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .title-block p { color: var(--muted); margin-top: 4px; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--blue);
+      color: white;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button.secondary { background: #334155; }
+    button.warn { background: #b45309; }
+    button.danger { background: #b91c1c; }
+    button.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
     .panel {
-      background: rgba(17,24,39,.94); border:1px solid rgba(148,163,184,.12); border-radius:18px; padding:18px;
-      box-shadow: 0 12px 30px rgba(0,0,0,.18);
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
     }
-    .sticky { position: sticky; top: 12px; align-self: start; }
-    .field { display:grid; grid-template-columns: 1fr 110px; gap:10px; align-items:center; margin: 12px 0; }
-    .field label { font-size:14px; color:#dbe4ef; }
-    .field input, .field select {
-      width:100%; background:#0b1220; color:var(--text); border:1px solid var(--line);
-      border-radius:10px; padding:10px; font-size:14px;
+
+    .controls {
+      position: sticky;
+      top: 12px;
+      align-self: start;
     }
-    .small { font-size:12px; color: var(--muted); }
-    .cards { display:grid; grid-template-columns: repeat(4, minmax(180px,1fr)); gap:14px; }
-    @media (max-width: 900px){ .cards { grid-template-columns: repeat(2, minmax(180px,1fr)); } }
-    @media (max-width: 600px){ .cards { grid-template-columns: 1fr; } }
-    .card { background: linear-gradient(180deg, rgba(30,41,59,.92), rgba(15,23,42,.96)); border:1px solid rgba(148,163,184,.12); border-radius:16px; padding:16px; }
-    .card h3 { font-size:15px; color:#cbd5e1; margin-bottom:10px; }
-    .value { font-size:30px; font-weight:700; margin-bottom:8px; }
-    .badge { display:inline-block; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:700; }
-    .safe { background: rgba(22,163,74,.15); color:#86efac; }
-    .warning { background: rgba(217,119,6,.16); color:#fdba74; }
-    .danger { background: rgba(220,38,38,.16); color:#fca5a5; }
-    .info { background: rgba(37,99,235,.16); color:#93c5fd; }
-    .hero { display:grid; grid-template-columns: 1.2fr .8fr; gap:16px; margin-bottom:16px; }
-    @media (max-width: 900px){ .hero { grid-template-columns: 1fr; } }
-    .overall { border-left: 8px solid #0891b2; padding-left:16px; }
-    .overall h2 { font-size:28px; margin-bottom:8px; }
-    .scoregrid { display:grid; grid-template-columns: repeat(2,1fr); gap:10px; }
-    .scorebox { background: rgba(15,23,42,.76); border:1px solid rgba(148,163,184,.12); border-radius:14px; padding:14px; }
-    .scorebox .big { font-size:28px; font-weight:700; margin-top:6px; }
-    .two { display:grid; grid-template-columns: 1.1fr .9fr; gap:16px; margin-top:16px; }
-    @media (max-width: 1000px){ .two { grid-template-columns: 1fr; } }
-    .check { display:flex; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:12px; background: rgba(15,23,42,.72); border:1px solid rgba(148,163,184,.10); margin-bottom:10px; }
-    .check strong { display:block; margin-bottom:4px; }
-    .timeline { display:grid; gap:8px; }
-    .time-btn { text-align:left; background:#0b1220; border:1px solid var(--line); }
-    #status { margin-top: 10px; }
-    code.inline { background:#0b1220; padding:2px 6px; border-radius:6px; }
-    ul { margin: 8px 0 0 18px; color: var(--muted); }
+    .controls h2 { margin-bottom: 4px; }
+    .subtle { color: var(--muted); font-size: 13px; }
+
+    .control-group {
+      margin-top: 16px;
+      border-top: 1px solid rgba(148,163,184,.12);
+      padding-top: 16px;
+    }
+    .field {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .field label {
+      font-size: 14px;
+      color: #dbe4ef;
+    }
+    .field input,
+    .field select,
+    textarea {
+      width: 100%;
+      background: #0b1220;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 14px;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    input[readonly] { opacity: .8; }
+    .subtle a { color: #93c5fd; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+    @media (max-width: 900px) {
+      .cards { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .metric-card {
+      background: linear-gradient(180deg, rgba(30,41,59,.88), rgba(15,23,42,.96));
+      border: 1px solid rgba(148,163,184,.12);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .metric-card h3 { font-size: 15px; color: #cbd5e1; margin-bottom: 10px; }
+    .value {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .safe { background: rgba(22,163,74,.15); color: #86efac; }
+    .warning { background: rgba(217,119,6,.17); color: #fdba74; }
+    .danger { background: rgba(220,38,38,.16); color: #fca5a5; }
+    .info { background: rgba(37,99,235,.16); color: #93c5fd; }
+    .card-note { margin-top: 8px; font-size: 12px; color: var(--muted); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+    }
+    .overall {
+      border-left: 8px solid var(--cyan);
+      padding-left: 16px;
+    }
+    .overall h2 { font-size: 30px; margin-bottom: 8px; }
+    .overall p { color: #d1d5db; }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .scorebox {
+      background: rgba(15,23,42,.75);
+      border: 1px solid rgba(148,163,184,.12);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .scorebox .small { color: var(--muted); font-size: 12px; }
+    .scorebox .big { font-size: 28px; font-weight: 700; margin-top: 6px; }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 1000px) {
+      .section-grid { grid-template-columns: 1fr; }
+    }
+
+    .checks {
+      display: grid;
+      gap: 10px;
+    }
+    .check-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(15,23,42,.72);
+      border: 1px solid rgba(148,163,184,.1);
+      align-items: start;
+    }
+    .check-item strong { display: block; margin-bottom: 4px; }
+    .check-item span { color: var(--muted); font-size: 13px; }
+
+    .timeline {
+      max-height: 760px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      padding-right: 4px;
+    }
+    .cue {
+      border: 1px solid rgba(148,163,184,.12);
+      background: rgba(15,23,42,.65);
+      border-radius: 14px;
+      padding: 12px;
+      cursor: pointer;
+    }
+    .cue.active {
+      border-color: rgba(37,99,235,.8);
+      box-shadow: 0 0 0 1px rgba(37,99,235,.4) inset;
+      background: rgba(30,41,59,.95);
+    }
+    .cue-time {
+      color: #93c5fd;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .cue-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .cue-copy {
+      color: #d1d5db;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .foot {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <div>
-        <h1>200 天線 Bull / Bear 儀表板</h1>
-        <p>GitHub Pages 版。頁面只讀取同站 <code class="inline">data/live.json</code>，由 GitHub Actions 定時更新。</p>
+    <div class="topbar">
+      <div class="title-block">
+        <h1>📉 200天線風險儀表板｜互動版</h1>
+        <p>按影片邏輯重建：先看跌穿200天線，再分辨事件驅動修正，還是結構性熊市。</p>
       </div>
-      <div class="btns">
-        <button id="refreshBtn">更新核心數據</button>
-        <a class="btn secondary" href="data/live.json" target="_blank" rel="noopener">查看 JSON</a>
+      <div class="btn-row">
+        <button id="btnLive">載入 repo 即時數據</button>
+        <button id="btnTranscript">載入影片數值</button>
+        <button id="btnMacro" class="secondary">宏觀恐慌情景</button>
+        <button id="btnBear" class="warn">結構性熊市場景</button>
+        <button id="btnReset" class="ghost">重設</button>
       </div>
     </div>
 
-    <div class="grid">
-      <div class="panel sticky">
+    <div class="layout">
+      <aside class="panel controls">
         <h2>控制面板</h2>
-        <p class="small">你可手動覆寫數值；不輸入時會沿用 GitHub Actions 產生的 live.json。</p>
-        <div class="field"><label>S&P 500</label><input id="sp500" type="number" step="0.01"></div>
-        <div class="field"><label>200 天線</label><input id="ma200" type="number" step="0.01"></div>
-        <div class="field"><label>VIX</label><input id="vix" type="number" step="0.01"></div>
-        <div class="field"><label>信用利差 (bp)</label><input id="spread" type="number" step="1"></div>
-        <div class="field"><label>SOS</label><input id="sos" type="number" step="0.001"></div>
-        <div class="field"><label>Polymarket 衰退機率 %</label><input id="poly" type="number" step="0.1"></div>
-        <div class="field"><label>T2108</label><input id="t2108" type="number" step="0.01" value="16.74"></div>
-        <div class="field"><label>回撤 %</label><input id="drawdown" type="number" step="0.01"></div>
-        <div class="field"><label>跌破前企穩日數</label><input id="holdDays" type="number" step="1"></div>
-        <div class="field"><label>觸發原因</label>
-          <select id="triggerType">
-            <option value="macro">宏觀恐慌 / 事件驅動</option>
-            <option value="structural">結構性熊市</option>
-            <option value="cyclical">週期性 / 滯脹</option>
-          </select>
-        </div>
-        <div class="field"><label>觸發因素可撤回？</label>
-          <select id="reversible">
-            <option value="yes">是</option>
-            <option value="no">否</option>
-          </select>
-        </div>
-        <div class="field"><label>收復 200 天線後企穩？</label>
-          <select id="reclaimStable">
-            <option value="unknown">未收復 / 未知</option>
-            <option value="yes">已收復並企穩</option>
-            <option value="no">收復後再跌破</option>
-          </select>
-        </div>
-        <div class="btns" style="margin-top:12px;">
-          <button class="secondary" id="saveBtn">儲存本機狀態</button>
-          <button class="secondary" id="loadVideoBtn">載入影片數值</button>
-        </div>
-        <div id="status" class="small"></div>
-        <div style="margin-top:14px;" class="small">
-          <strong>資料來源提示</strong>
-          <ul>
-            <li>VIX 官方歷史頁：<a href="https://www.cboe.com/tradable_products/vix/vix_historical_data/" target="_blank" rel="noopener">Cboe</a></li>
-            <li>T2108 定義：<a href="https://help.tc2000.com/m/69404/l/755052-t2108-of-stocks-above-40-day-pma-also-t2s-110-112-114-116" target="_blank" rel="noopener">TC2000</a></li>
-            <li>SOS 以 IURSA 近似計算，門檻 0.2。</li>
-          </ul>
-        </div>
-      </div>
+        <p class="subtle">所有數值一改即時計分。資料會自動存到瀏覽器。GitHub Pages 版會讀取 repo 內的 <span class="mono">data/live.json</span>。該檔案由 GitHub Actions 定時更新：FRED 取 SP500、VIX、Spread、IURSA，再自動計算 200 天線、回撤、企穩日數和 SOS。</p>
 
-      <div>
-        <div class="panel hero">
+        <div class="control-group" style="padding-top:0; border-top:0; margin-top:12px;">
+          <div class="btn-row" style="margin-bottom:8px;">
+            <button id="btnRefreshCore" class="secondary">重新載入 repo 數據</button>
+            <button id="btnComputeSOS" class="secondary">重載 SOS</button>
+            <button id="btnLoadCsvHelp" class="ghost">CSV 匯入說明</button>
+          </div>
+          <div id="liveStatus" class="subtle">尚未載入 repo 即時數據。</div>
+          <div id="liveHint" class="subtle" style="margin-top:6px;">GitHub Pages 版不再直接跨站抓 FRED；而是讀取同 repo 的 <span class="mono">data/live.json</span>。若此檔未生成，請先在 GitHub 的 Actions 頁手動跑一次 workflow。</div>
+        </div>
+
+        <div class="control-group">
+          <div class="field"><label for="spx">S&amp;P 500 現價</label><input id="spx" type="number" step="0.1"></div>
+          <div class="field"><label for="ma200">200天線</label><input id="ma200" type="number" step="0.1"></div>
+          <div class="field"><label for="vix">VIX</label><input id="vix" type="number" step="0.1"></div>
+          <div class="field"><label for="spread">High Yield Credit Spread (bp)</label><input id="spread" type="number" step="1"></div>
+          <div class="field"><label for="sos">Richmond Fed SOS</label><input id="sos" type="number" step="0.001"></div>
+          <div class="field"><label for="poly">Polymarket 衰退機率 (%)</label><input id="poly" type="number" step="1" min="0" max="100"></div>
+          <div class="field"><label for="t2108">T2108 (%)</label><input id="t2108" type="number" step="0.01" min="0" max="100"></div>
+          <div class="field"><label for="drawdown">由高位回撤 (%)</label><input id="drawdown" type="number" step="0.1" min="0"></div>
+          <div class="field"><label for="holdDaysAuto">自動計算企穩日數</label><input id="holdDaysAuto" type="number" step="1" min="0" readonly></div>
+        </div>
+
+        <div class="control-group">
+          <div class="field"><label for="trigger">觸發原因</label>
+            <select id="trigger">
+              <option value="event">事件驅動 / 宏觀恐慌</option>
+              <option value="cycle">週期性 / 滯脹風險</option>
+              <option value="structural">結構性 / 信貸問題</option>
+            </select>
+          </div>
+          <div class="field"><label for="reversible">原因可否撤回</label>
+            <select id="reversible">
+              <option value="yes">可以</option>
+              <option value="mixed">部分可以</option>
+              <option value="no">不可以</option>
+            </select>
+          </div>
+          <div class="field"><label for="holdDays">跌破前已企穩200天線日數</label><input id="holdDays" type="number" step="1" min="0"></div>
+          <div class="field"><label for="reclaim">收復200天線狀態</label>
+            <select id="reclaim">
+              <option value="none">未收復</option>
+              <option value="quick">5–15個交易日內快速收復</option>
+              <option value="stable">收復後已企穩</option>
+              <option value="failed">收復後再次跌破</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="btn-row" style="margin-bottom:10px;">
+            <button id="btnExport" class="secondary">匯出 JSON</button>
+            <button id="btnImport" class="secondary">匯入 JSON</button>
+            <button id="btnCopy" class="ghost">複製摘要</button>
+          </div>
+          <textarea id="jsonBox" placeholder="匯出的設定會出現在這裡；也可把 JSON 貼進來再按匯入。"></textarea>
+        </div>
+
+        <div class="control-group">
+          <div style="font-weight:700; margin-bottom:8px;">CSV 匯入</div>
+          <div class="subtle" style="line-height:1.6; margin-bottom:10px;">抓取失敗時，可先到 FRED 下載 CSV，再在這裡匯入。SP500 / VIXCLS / BAMLH0A0HYM2 / IURSA 都支援。匯入後會自動計算 200 天線、回撤、SOS。</div>
+          <div class="btn-row" style="margin-bottom:10px;">
+            <input id="fileSP500" type="file" accept=".csv,text/csv" style="display:none">
+            <input id="fileVIX" type="file" accept=".csv,text/csv" style="display:none">
+            <input id="fileSpread" type="file" accept=".csv,text/csv" style="display:none">
+            <input id="fileIURSA" type="file" accept=".csv,text/csv" style="display:none">
+            <button id="btnFileSP500" class="ghost">匯入 SP500 CSV</button>
+            <button id="btnFileVIX" class="ghost">匯入 VIX CSV</button>
+            <button id="btnFileSpread" class="ghost">匯入 Spread CSV</button>
+            <button id="btnFileIURSA" class="ghost">匯入 IURSA CSV</button>
+          </div>
+          <div id="importStatus" class="subtle">尚未匯入 CSV。</div>
+        </div>
+
+        <div class="control-group">
+          <div style="font-weight:700; margin-bottom:8px;">數據來源與備註</div>
+          <div class="subtle" style="line-height:1.6;">
+            核心即時數據：FRED 的 SP500、VIXCLS、BAMLH0A0HYM2、IURSA。
+            VIX 可在官方 Cboe 歷史頁與 FRED 對照。
+            T2108 並非免費官方公開 API，這裡保留手動輸入，並附 TC2000 指標說明連結。
+          </div>
+          <div class="btn-row" style="margin-top:10px;">
+            <button id="btnOpenFRED" class="ghost">開啟 FRED 系列頁</button>
+            <button id="btnOpenVIXNote" class="ghost">VIX 來源說明</button>
+            <button id="btnOpenT2108Note" class="ghost">T2108 來源說明</button>
+          </div>
+        </div>
+
+        <div class="foot">
+          這是單檔 HTML。毋須伺服器。若瀏覽器或來源站阻擋跨站讀取，按鈕會保留你原本輸入的數值，並顯示錯誤訊息。
+        </div>
+      </aside>
+
+      <main>
+        <section class="panel hero">
           <div class="overall">
-            <h2 id="overallTitle">載入中…</h2>
-            <p id="overallText">正在讀取 live.json。</p>
-            <p class="small" style="margin-top:10px;">資料日期：<span id="asOf">—</span></p>
+            <div class="badge info" id="stateBadge">分析中</div>
+            <h2 id="overallTitle">等待輸入</h2>
+            <p id="overallDesc">這個儀表板會把影片中的判斷框架，拆成可操作的風險與買入條件。</p>
+            <div style="margin-top:12px; color: var(--muted); font-size: 14px;" id="scenarioSummary"></div>
           </div>
-          <div class="scoregrid">
-            <div class="scorebox">
-              <div class="small">熊市風險分數</div>
-              <div class="big" id="riskScore">—</div>
-            </div>
-            <div class="scorebox">
-              <div class="small">買入準備分數</div>
-              <div class="big" id="buyScore">—</div>
-            </div>
-            <div class="scorebox">
-              <div class="small">歷史 bucket</div>
-              <div class="big" id="historyBucket">—</div>
-            </div>
-            <div class="scorebox">
-              <div class="small">部署偏向</div>
-              <div class="big" id="deploymentBias">—</div>
-            </div>
+          <div class="scoreboard">
+            <div class="scorebox"><div class="small">熊市風險分數</div><div class="big" id="riskScore">0.0</div></div>
+            <div class="scorebox"><div class="small">買入準備分數</div><div class="big" id="buyScore">0 / 3</div></div>
+            <div class="scorebox"><div class="small">12個月歷史傾向</div><div class="big" id="historyTilt">--</div></div>
+            <div class="scorebox"><div class="small">部署建議</div><div class="big" id="actionBias">--</div></div>
           </div>
-        </div>
+        </section>
 
-        <div class="cards">
-          <div class="card"><h3>S&P 500 vs 200MA</h3><div class="value" id="cardSp500">—</div><span class="badge info" id="badgeSp500">—</span></div>
-          <div class="card"><h3>VIX</h3><div class="value" id="cardVix">—</div><span class="badge info" id="badgeVix">—</span></div>
-          <div class="card"><h3>高收益債利差</h3><div class="value" id="cardSpread">—</div><span class="badge info" id="badgeSpread">—</span></div>
-          <div class="card"><h3>SOS</h3><div class="value" id="cardSos">—</div><span class="badge info" id="badgeSos">—</span></div>
-        </div>
+        <section class="cards">
+          <div class="metric-card">
+            <h3>S&amp;P 500 vs 200天線</h3>
+            <div class="value" id="spxValue">--</div>
+            <div class="badge" id="spxBadge">--</div>
+            <div class="card-note" id="spxNote">--</div>
+          </div>
+          <div class="metric-card">
+            <h3>VIX 恐慌指數</h3>
+            <div class="value" id="vixValue">--</div>
+            <div class="badge" id="vixBadge">--</div>
+            <div class="card-note" id="vixNote">VIX &gt; 30 才進入高於平均回報區。</div>
+          </div>
+          <div class="metric-card">
+            <h3>High Yield Credit Spread</h3>
+            <div class="value" id="spreadValue">--</div>
+            <div class="badge" id="spreadBadge">--</div>
+            <div class="card-note" id="spreadNote">影片提到 400–450bp 才要認真戒備。</div>
+          </div>
+          <div class="metric-card">
+            <h3>Richmond Fed SOS</h3>
+            <div class="value" id="sosValue">--</div>
+            <div class="badge" id="sosBadge">--</div>
+            <div class="card-note" id="sosNote">0.2 是衰退門檻。</div>
+          </div>
+        </section>
 
-        <div class="two">
-          <div class="panel">
-            <h2>基本面與技術面檢查</h2>
-            <div id="checks"></div>
+        <section class="panel section-grid">
+          <div>
+            <h2>風險與買入檢查表</h2>
+            <p class="subtle" style="margin-bottom:12px;">左邊看是否真熊市，右邊看是否達到「高於平均回報」的買入區。</p>
+            <div class="checks" id="checksList"></div>
           </div>
-          <div class="panel">
-            <h2>對應影片段落</h2>
-            <div class="timeline">
-              <button class="time-btn" data-time="0:00">0:00 三大指數齊跌穿 200 天線</button>
-              <button class="time-btn" data-time="3:33">3:33 大型股災平均再跌 38.5%</button>
-              <button class="time-btn" data-time="5:45">5:45 153 次跌破 200 天線回測</button>
-              <button class="time-btn" data-time="8:00">8:00 宏觀恐慌 vs 結構性熊市</button>
-              <button class="time-btn" data-time="11:23">11:23 Richmond Fed SOS 與衰退偵測</button>
-              <button class="time-btn" data-time="14:45">14:45 VIX / T2108 / 回撤買入區</button>
-              <button class="time-btn" data-time="19:30">19:30 總結與部署</button>
-            </div>
+          <div>
+            <h2>影片時間軸</h2>
+            <p class="subtle" style="margin-bottom:12px;">按任一段，右側摘要會跳到對應邏輯。這可配合你日後嵌入影片使用。</p>
+            <div class="timeline" id="timeline"></div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section class="panel" style="margin-top:16px;">
+          <h2>逐步解讀</h2>
+          <div id="chapterTitle" style="font-weight:700; margin-top:8px; margin-bottom:8px; color:#cbd5e1;">Chapter 1</div>
+          <p id="chapterCopy" style="color:#dbe4ef; line-height:1.7;">--</p>
+        </section>
+      </main>
     </div>
   </div>
 
   <script>
-    const repoBase = location.pathname.includes('/Bull_or_Bear') ? '/Bull_or_Bear' : '';
-    const $ = (id) => document.getElementById(id);
+    const STORAGE_KEY = 'risk-dashboard-transcript-state-v2';
 
-    function n(id) {
-      const raw = $(id).value;
-      return raw === '' ? null : Number(raw);
+    const DATA_LINKS = {
+      fredSP500: 'https://fred.stlouisfed.org/series/SP500',
+      fredVIX: 'https://fred.stlouisfed.org/series/VIXCLS',
+      fredSpread: 'https://fred.stlouisfed.org/series/BAMLH0A0HYM2',
+      fredIURSA: 'https://fred.stlouisfed.org/series/IURSA',
+      cboeVix: 'https://www.cboe.com/tradable_products/vix/vix_historical_data/',
+      t2108: 'https://help.tc2000.com/m/69404/l/755052-t2108-of-stocks-above-40-day-pma-also-t2s-110-112-114-116'
+    };
+
+    const importedSeries = { sp500: null, vix: null, spread: null, iursa: null };
+
+    const FRED_CSV = {
+      sp500: 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500',
+      vix: 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS',
+      spread: 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=BAMLH0A0HYM2',
+      iursa: 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=IURSA'
+    };
+
+    const transcriptCues = [
+      { t: '0:00', title: '跌穿200天線', copy: '影片起點：標普500收6506，200天線6621，且三大指數同時跌穿200天線。這是警號，但未足以單獨證明結構性熊市。' },
+      { t: '2:16', title: '大型股災樣本', copy: '只看六次大型股災，跌穿200天線之前平均已跌7.5%，之後平均還可再跌38.5%。這一段是 Paul Tudor Jones 風控邏輯的核心。' },
+      { t: '5:45', title: '153次完整回測', copy: '若放大至1957年以來153次跌破200天線，65%的時間12個月後仍是正回報，中位數約9%。長時間站穩200天線後才跌破，往後12個月表現更好。' },
+      { t: '8:00', title: '宏觀恐慌 vs 結構性熊市', copy: '判斷關鍵不在跌破本身，而在跌破背後是短期可撤回的宏觀事件，還是不可逆的信貸、經濟、制度性問題。' },
+      { t: '9:02', title: '信用利差', copy: '高收益債信用利差是最可靠的早期預警之一。影片以327bp作為現況，並指400–450bp以上才需明顯升級戒備。' },
+      { t: '11:23', title: '衰退偵測', copy: 'Richmond Fed SOS 以0.2為門檻；影片中的0.042遠低於門檻。Polymarket的衰退機率只是輔助，不是決定性指標。' },
+      { t: '14:45', title: '三大技術買入區', copy: '技術面三項觀察：VIX需升破30、T2108需跌穿10%、指數實際回撤通常要超過10%。三者同時觸發，才接近大舉參與區。' },
+      { t: '17:53', title: '快速收復不一定安全', copy: '長期在200天線上方後跌破，若5–15個交易日快速收復，之後3個月平均回報反而可能偏弱。重點是收復後能否企穩。' },
+      { t: '19:30', title: '總結部署', copy: '結論不是恐慌清倉，也不是孤注一擲。若基本面未亮紅燈、技術面又未到極端超賣，較合理的是耐心等更好位置或分批部署。' }
+    ];
+
+    const defaults = {
+      spx: 6506,
+      ma200: 6621,
+      vix: 27,
+      spread: 327,
+      sos: 0.042,
+      poly: 35,
+      t2108: 16.74,
+      drawdown: 7.5,
+      trigger: 'event',
+      reversible: 'yes',
+      holdDays: 214,
+      reclaim: 'none'
+    };
+
+    const macroScenario = {
+      ...defaults,
+      vix: 31.5,
+      spread: 385,
+      sos: 0.085,
+      poly: 42,
+      t2108: 11.2,
+      drawdown: 10.8,
+      trigger: 'event',
+      reversible: 'mixed',
+      reclaim: 'quick'
+    };
+
+    const bearScenario = {
+      ...defaults,
+      spx: 6030,
+      ma200: 6590,
+      vix: 38.2,
+      spread: 515,
+      sos: 0.24,
+      poly: 62,
+      t2108: 7.8,
+      drawdown: 14.5,
+      trigger: 'structural',
+      reversible: 'no',
+      holdDays: 330,
+      reclaim: 'failed'
+    };
+
+    const ids = ['spx','ma200','vix','spread','sos','poly','t2108','drawdown','trigger','reversible','holdDays','reclaim'];
+
+    function el(id) { return document.getElementById(id); }
+    function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+    function fmt(n, digits = 1) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: digits }); }
+
+    function saveState() {
+      const state = getState();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    function setBadge(el, text, cls) {
-      el.className = 'badge ' + cls;
-      el.textContent = text;
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
     }
 
-    function status(msg) {
-      $('status').textContent = msg;
+    function applyState(state) {
+      ids.forEach(id => {
+        if (state[id] !== undefined) el(id).value = state[id];
+      });
+      render();
     }
 
-    function historyBucket(holdDays) {
-      if (holdDays == null) return '未知';
-      if (holdDays >= 180 && holdDays < 365) return '6–12月';
-      if (holdDays >= 90 && holdDays < 180) return '3–6月';
-      if (holdDays >= 365) return '12月+';
-      return '幾日–幾星期';
+    function getState() {
+      return Object.fromEntries(ids.map(id => [id, el(id).value]));
+    }
+
+    function setBadge(node, tone, text) {
+      node.className = `badge ${tone}`;
+      node.textContent = text;
+    }
+
+    function toneByBool(v) {
+      return v ? 'safe' : 'danger';
     }
 
     function renderChecks(items) {
-      $('checks').innerHTML = items.map(([title, detail, badgeClass, badgeText]) => `
-        <div class="check">
-          <div><strong>${title}</strong><span>${detail}</span></div>
-          <span class="badge ${badgeClass}">${badgeText}</span>
-        </div>`).join('');
+      el('checksList').innerHTML = items.map(item => `
+        <div class="check-item">
+          <div>
+            <strong>${item.title}</strong>
+            <span>${item.note}</span>
+          </div>
+          <div class="badge ${item.tone}">${item.status}</div>
+        </div>
+      `).join('');
     }
 
-    function render() {
-      const sp500 = n('sp500');
-      const ma200 = n('ma200');
-      const vix = n('vix');
-      const spread = n('spread');
-      const sos = n('sos');
-      const poly = n('poly');
-      const t2108 = n('t2108');
-      const drawdown = n('drawdown');
-      const holdDays = n('holdDays');
-      const triggerType = $('triggerType').value;
-      const reversible = $('reversible').value;
-      const reclaimStable = $('reclaimStable').value;
-
-      let risk = 0;
-      let buy = 0;
-      const checks = [];
-
-      if (sp500 != null && ma200 != null) {
-        $('cardSp500').textContent = `${sp500.toFixed(0)} / ${ma200.toFixed(0)}`;
-        if (sp500 < ma200) {
-          setBadge($('badgeSp500'), '跌破 200MA', 'danger');
-          risk += 2;
-          checks.push(['價格位置', '標普在 200 天線之下，需提高警覺。', 'danger', '警惕']);
-        } else {
-          setBadge($('badgeSp500'), '企穩 200MA 之上', 'safe');
-          checks.push(['價格位置', '標普在 200 天線之上。', 'safe', '偏正面']);
-        }
-      }
-
-      if (vix != null) {
-        $('cardVix').textContent = vix.toFixed(2);
-        if (vix >= 30) {
-          setBadge($('badgeVix'), '極度恐慌', 'safe');
-          buy += 1;
-          checks.push(['VIX', 'VIX 超過 30，屬高於平均回報區。', 'safe', '買入訊號']);
-        } else if (vix >= 20) {
-          setBadge($('badgeVix'), '20–30 危險區', 'warning');
-          risk += 1;
-          checks.push(['VIX', '20 至 30 之間往往最尷尬。', 'warning', '未到位']);
-        } else {
-          setBadge($('badgeVix'), '低恐慌', 'info');
-          checks.push(['VIX', '未見極端恐慌。', 'info', '中性']);
-        }
-      }
-
-      if (spread != null) {
-        $('cardSpread').textContent = `${spread.toFixed(0)} bp`;
-        if (spread >= 450) {
-          setBadge($('badgeSpread'), '紅燈', 'danger');
-          risk += 3;
-          checks.push(['信用利差', '突破 450bp，接近結構風險區。', 'danger', '紅燈']);
-        } else if (spread >= 400) {
-          setBadge($('badgeSpread'), '需認真對待', 'warning');
-          risk += 2;
-          checks.push(['信用利差', '突破 400bp，需認真對待。', 'warning', '警號']);
-        } else {
-          setBadge($('badgeSpread'), '正常範圍', 'safe');
-          checks.push(['信用利差', '仍未到影片所述警戒區。', 'safe', '正常']);
-        }
-      }
-
-      if (sos != null) {
-        $('cardSos').textContent = sos.toFixed(3);
-        if (sos >= 0.2) {
-          setBadge($('badgeSos'), '衰退警號', 'danger');
-          risk += 3;
-          checks.push(['SOS', '高於 0.2，衰退風險明顯。', 'danger', '紅燈']);
-        } else {
-          setBadge($('badgeSos'), '未達衰退門檻', 'safe');
-          checks.push(['SOS', '低於 0.2，暫未見衰退訊號。', 'safe', '正常']);
-        }
-      }
-
-      if (poly != null) {
-        if (poly >= 50) risk += 1;
-        checks.push(['Polymarket', poly >= 50 ? '市場押注衰退比重偏高。' : '預測市場仍偏向無衰退。', poly >= 50 ? 'warning' : 'safe', poly >= 50 ? '偏弱' : '偏穩']);
-      }
-
-      if (t2108 != null) {
-        if (t2108 <= 10) {
-          buy += 1;
-          checks.push(['T2108', '低於 10%，市場極度超賣。', 'safe', '買入訊號']);
-        } else {
-          checks.push(['T2108', '未到極度超賣區。', 'info', '未到位']);
-        }
-      }
-
-      if (drawdown != null) {
-        if (drawdown >= 10) {
-          buy += 1;
-          checks.push(['回撤', '超過 10%，進入較值得觀察區域。', 'safe', '買入訊號']);
-        } else {
-          checks.push(['回撤', '仍未達 10% 回撤。', 'info', '未到位']);
-        }
-      }
-
-      if (triggerType === 'structural') risk += 3;
-      else if (triggerType === 'cyclical') risk += 2;
-      else buy += 1;
-
-      if (reversible === 'yes') buy += 1;
-      else risk += 1;
-
-      if (reclaimStable === 'yes') risk -= 1;
-      if (reclaimStable === 'no') risk += 2;
-
-      risk = Math.max(0, risk);
-      $('riskScore').textContent = risk;
-      $('buyScore').textContent = buy;
-      $('historyBucket').textContent = historyBucket(holdDays);
-
-      let overallTitle = '耐心等待';
-      let overallText = '基本面未必亮紅燈，但技術面三大買入條件也未齊。';
-      let deploy = 'Wait';
-
-      if (risk >= 7) {
-        overallTitle = '高風險區';
-        overallText = '更像結構性或週期性熊市，先守後攻。';
-        deploy = 'Defend';
-      } else if (buy >= 3 && risk <= 4) {
-        overallTitle = '值得分批部署';
-        overallText = '買入觸發多於風險訊號，可考慮分段進場。';
-        deploy = 'Scale in';
-      } else if (risk <= 2 && buy <= 1) {
-        overallTitle = '偏中性';
-        overallText = '不是世界末日，但也未到重手撈底。';
-        deploy = 'Neutral';
-      }
-
-      $('overallTitle').textContent = overallTitle;
-      $('overallText').textContent = overallText;
-      $('deploymentBias').textContent = deploy;
-      renderChecks(checks);
+    function renderTimeline(activeIndex = 0) {
+      el('timeline').innerHTML = transcriptCues.map((cue, i) => `
+        <div class="cue ${i === activeIndex ? 'active' : ''}" data-idx="${i}">
+          <div class="cue-time">${cue.t}</div>
+          <div class="cue-title">${cue.title}</div>
+          <div class="cue-copy">${cue.copy}</div>
+        </div>
+      `).join('');
+      [...document.querySelectorAll('.cue')].forEach(node => {
+        node.addEventListener('click', () => {
+          const idx = Number(node.dataset.idx);
+          setActiveCue(idx);
+        });
+      });
     }
 
-    async function loadLive() {
-      status('正在讀取 live.json…');
-      const url = `${repoBase}/data/live.json?ts=${Date.now()}`;
+    function setActiveCue(idx) {
+      [...document.querySelectorAll('.cue')].forEach((node, i) => {
+        node.classList.toggle('active', i === idx);
+      });
+      const cue = transcriptCues[idx];
+      el('chapterTitle').textContent = `${cue.t}｜${cue.title}`;
+      el('chapterCopy').textContent = cue.copy;
+    }
+
+    function classifyHistoryBucket(holdDays) {
+      if (holdDays >= 180 && holdDays <= 365) {
+        return { label: '6–12個月組別', tilt: '12個月中位數回報約10%，正回報比率約70%' };
+      }
+      if (holdDays >= 90 && holdDays < 180) {
+        return { label: '3–6個月組別', tilt: '12個月中位數回報約13%，正回報比率約82%' };
+      }
+      return { label: '短期組別', tilt: '12個月中位數回報約7%，正回報比率約59%' };
+    }
+
+
+    function setStatus(text, tone = 'subtle') {
+      const node = el('liveStatus');
+      node.textContent = text;
+      node.style.color = tone === 'error' ? '#fca5a5' : tone === 'ok' ? '#86efac' : '#94a3b8';
+    }
+
+
+    function setImportStatus(text, tone = 'subtle') {
+      const node = el('importStatus');
+      if (!node) return;
+      node.textContent = text;
+      node.style.color = tone === 'error' ? '#fca5a5' : tone === 'ok' ? '#86efac' : '#94a3b8';
+    }
+
+    function applySeriesToInputs(kind, series) {
+      if (!series || !series.length) return;
+      importedSeries[kind] = series;
+      if (kind === 'sp500') {
+        const vals = series.map(x => x.value).filter(v => Number.isFinite(v));
+        const last = lastValid(series);
+        const ma200 = computeMA(vals, 200);
+        const drawdown = computeDrawdownFromTrailingPeak(vals, 252);
+        const holdDaysAuto = computeHoldDaysAround200(vals);
+        if (last) el('spx').value = last.value.toFixed(1);
+        if (ma200 != null) el('ma200').value = ma200.toFixed(1);
+        if (drawdown != null) el('drawdown').value = drawdown.toFixed(1);
+        if (holdDaysAuto != null) {
+          el('holdDaysAuto').value = holdDaysAuto;
+          if (!Number(el('holdDays').value)) el('holdDays').value = holdDaysAuto;
+        }
+      } else if (kind === 'vix') {
+        const last = lastValid(series);
+        if (last) el('vix').value = last.value.toFixed(2);
+      } else if (kind === 'spread') {
+        const last = lastValid(series);
+        if (last) el('spread').value = Math.round(last.value);
+      } else if (kind === 'iursa') {
+        const last = lastValid(series);
+        const sos = computeSOSFromIURSA(series);
+        if (sos != null) el('sos').value = sos.toFixed(3);
+      }
+      render();
+    }
+
+    async function importCSVFile(kind, file) {
+      try {
+        const text = await file.text();
+        const series = parseFredCSV(text).filter(x => x.value !== null);
+        if (!series.length) throw new Error('CSV 內沒有有效數值');
+        applySeriesToInputs(kind, series);
+        const last = lastValid(series);
+        setImportStatus(`已匯入 ${kind.toUpperCase()}：${file.name}｜最新日期 ${last?.date || '--'}`, 'ok');
+      } catch (err) {
+        console.error(err);
+        setImportStatus(`匯入失敗：${err.message}`, 'error');
+      }
+    }
+
+    function openCsvHelp() {
+      alert('抓取失敗時的做法：\n\n1. 到 FRED 系列頁按 Download Data 下載 CSV。\n2. SP500 匯入後會自動重算 200 天線、回撤、企穩日數。\n3. IURSA 匯入後會自動重算 SOS。\n4. VIX 與 Spread 匯入後會更新對應欄位。\n\nGitHub Pages 建議改用 GitHub Actions 先生成 data/live.json。若只是在本機預覽，仍可用 CSV 匯入。');
+    }
+
+    function wireFilePicker(buttonId, inputId, kind) {
+      el(buttonId).addEventListener('click', () => el(inputId).click());
+      el(inputId).addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) importCSVFile(kind, file);
+        e.target.value = '';
+      });
+    }
+
+    function parseFredCSV(text) {
+      const lines = text.trim().split(/\r?\n/).slice(1);
+      return lines.map(line => {
+        const [date, value] = line.split(',');
+        const n = Number(value);
+        return { date, value: Number.isFinite(n) ? n : null };
+      }).filter(row => row.date);
+    }
+
+    async function fetchFredSeries(url) {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const d = await res.json();
-      $('asOf').textContent = d.as_of || '—';
-      $('sp500').value = d.sp500 ?? '';
-      $('ma200').value = d.ma200 ?? '';
-      $('vix').value = d.vix ?? '';
-      $('spread').value = d.creditSpreadBp ?? '';
-      $('sos').value = d.sos ?? '';
-      $('poly').value = d.polymarketRecessionProb ?? '';
-      $('drawdown').value = d.drawdownPct ?? '';
-      $('holdDays').value = d.holdDaysAbove200 ?? '';
-      render();
-      status(`已更新：${d.as_of || '未知日期'}`);
+      return parseFredCSV(await res.text()).filter(x => x.value !== null);
     }
 
-    function saveLocal() {
-      const ids = ['sp500','ma200','vix','spread','sos','poly','t2108','drawdown','holdDays','triggerType','reversible','reclaimStable'];
-      const state = {};
-      ids.forEach(id => state[id] = $(id).value);
-      localStorage.setItem('bull_or_bear_state', JSON.stringify(state));
-      status('已儲存本機狀態');
+    function lastValid(series) {
+      for (let i = series.length - 1; i >= 0; i--) {
+        if (Number.isFinite(series[i].value)) return series[i];
+      }
+      return null;
     }
 
-    function loadLocal() {
-      const raw = localStorage.getItem('bull_or_bear_state');
-      if (!raw) return;
+    function mean(arr) {
+      return arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
+    }
+
+    function computeMA(values, period) {
+      if (values.length < period) return null;
+      return mean(values.slice(-period));
+    }
+
+    function computeDrawdownFromTrailingPeak(values, lookback = 252) {
+      const window = values.slice(-lookback);
+      if (!window.length) return null;
+      const peak = Math.max(...window);
+      const last = window[window.length - 1];
+      return peak > 0 ? ((peak - last) / peak) * 100 : null;
+    }
+
+    function computeHoldDaysAround200(prices) {
+      if (prices.length < 220) return null;
+      const ma = [];
+      for (let i = 0; i < prices.length; i++) {
+        if (i < 199) ma.push(null);
+        else ma.push(mean(prices.slice(i - 199, i + 1)));
+      }
+      const above = prices.map((p, i) => ma[i] == null ? null : p >= ma[i]);
+      let idx = above.length - 1;
+      while (idx >= 0 && above[idx] === null) idx--;
+      if (idx < 0) return null;
+
+      if (above[idx] === false) {
+        let count = 0;
+        idx -= 1;
+        while (idx >= 0 && above[idx] === true) { count++; idx--; }
+        return count;
+      }
+
+      let count = 0;
+      while (idx >= 0 && above[idx] === true) { count++; idx--; }
+      return count;
+    }
+
+    function computeSOSFromIURSA(series) {
+      const values = series.map(x => x.value).filter(v => Number.isFinite(v));
+      if (values.length < 78) return null;
+      const ma26 = [];
+      for (let i = 0; i < values.length; i++) {
+        if (i < 25) ma26.push(null);
+        else ma26.push(mean(values.slice(i - 25, i + 1)));
+      }
+      let lastIdx = ma26.length - 1;
+      while (lastIdx >= 0 && ma26[lastIdx] == null) lastIdx--;
+      if (lastIdx < 77) return null;
+      const current = ma26[lastIdx];
+      const prior = ma26.slice(lastIdx - 52, lastIdx).filter(v => v != null);
+      if (prior.length < 52) return null;
+      const priorMin = Math.min(...prior);
+      return current - priorMin;
+    }
+
+    
+async function fetchLiveCoreData() {
+  setStatus('正在讀取 repo 的 data/live.json…');
+  try {
+    const url = new URL('data/live.json', window.location.href);
+    url.searchParams.set('ts', Date.now());
+    const res = await fetch(url.toString(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+
+    if (Number.isFinite(Number(d.sp500))) el('spx').value = Number(d.sp500).toFixed(1);
+    if (Number.isFinite(Number(d.ma200))) el('ma200').value = Number(d.ma200).toFixed(1);
+    if (Number.isFinite(Number(d.vix))) el('vix').value = Number(d.vix).toFixed(2);
+    if (Number.isFinite(Number(d.creditSpreadBp))) el('spread').value = Math.round(Number(d.creditSpreadBp));
+    if (Number.isFinite(Number(d.sos))) el('sos').value = Number(d.sos).toFixed(3);
+    if (Number.isFinite(Number(d.drawdownPct))) el('drawdown').value = Number(d.drawdownPct).toFixed(1);
+    if (Number.isFinite(Number(d.holdDaysAbove200))) {
+      el('holdDaysAuto').value = Math.round(Number(d.holdDaysAbove200));
+      if (!Number(el('holdDays').value)) el('holdDays').value = Math.round(Number(d.holdDaysAbove200));
+    }
+    if (d.polymarketRecessionProb !== undefined && d.polymarketRecessionProb !== null && Number.isFinite(Number(d.polymarketRecessionProb))) {
+      el('poly').value = Math.round(Number(d.polymarketRecessionProb));
+    }
+
+    const asOf = d.as_of || '--';
+    const parts = [];
+    if (d.latestDates?.sp500) parts.push(`SPX ${d.latestDates.sp500}`);
+    if (d.latestDates?.vix) parts.push(`VIX ${d.latestDates.vix}`);
+    if (d.latestDates?.spread) parts.push(`Spread ${d.latestDates.spread}`);
+    if (d.latestDates?.iursa) parts.push(`IURSA ${d.latestDates.iursa}`);
+    setStatus(`已載入 repo 數據：as of ${asOf}${parts.length ? '｜' + parts.join('｜') : ''}`, 'ok');
+    render();
+  } catch (err) {
+    console.error(err);
+    setStatus(`讀取失敗：${err.message}。請確認 repo 內已有 data/live.json，並在 GitHub 的 Actions 頁手動跑一次 workflow。若只是本機預覽，仍可用 CSV 匯入。`, 'error');
+  }
+}
+
+async function recomputeSOSOnly() {
+  return fetchLiveCoreData();
+}
+
+    function render() {
+      const s = {
+        spx: num(el('spx').value),
+        ma200: num(el('ma200').value),
+        vix: num(el('vix').value),
+        spread: num(el('spread').value),
+        sos: num(el('sos').value),
+        poly: num(el('poly').value),
+        t2108: num(el('t2108').value),
+        drawdown: num(el('drawdown').value),
+        trigger: el('trigger').value,
+        reversible: el('reversible').value,
+        holdDays: num(el('holdDays').value),
+        reclaim: el('reclaim').value,
+      };
+
+      const below200 = s.spx < s.ma200;
+      const gapPct = s.ma200 ? ((s.spx - s.ma200) / s.ma200) * 100 : 0;
+      const autoHold = Number(el('holdDaysAuto').value);
+      const history = classifyHistoryBucket(s.holdDays || autoHold || 0);
+
+      let riskScore = 0;
+      let buySignals = 0;
+      let activeCue = 0;
+
+      if (below200) { riskScore += 1.0; activeCue = 0; }
+      if (s.vix > 30) { riskScore += 0.5; buySignals += 1; activeCue = Math.max(activeCue, 6); }
+      else if (s.vix >= 20) { riskScore += 0.25; }
+
+      if (s.spread >= 450) { riskScore += 1.25; activeCue = Math.max(activeCue, 4); }
+      else if (s.spread >= 400) { riskScore += 0.75; activeCue = Math.max(activeCue, 4); }
+
+      if (s.sos >= 0.2) { riskScore += 1.75; activeCue = Math.max(activeCue, 5); }
+      else if (s.sos >= 0.1) { riskScore += 0.6; activeCue = Math.max(activeCue, 5); }
+
+      if (s.poly >= 50) { riskScore += 0.5; }
+      else if (s.poly >= 40) { riskScore += 0.25; }
+
+      if (s.t2108 <= 10) { buySignals += 1; activeCue = Math.max(activeCue, 6); }
+      if (s.drawdown >= 10) { buySignals += 1; activeCue = Math.max(activeCue, 6); }
+
+      if (s.trigger === 'cycle') riskScore += 0.5;
+      if (s.trigger === 'structural') { riskScore += 1.25; activeCue = Math.max(activeCue, 3); }
+
+      if (s.reversible === 'mixed') riskScore += 0.35;
+      if (s.reversible === 'no') { riskScore += 0.85; activeCue = Math.max(activeCue, 3); }
+
+      if (s.reclaim === 'quick') { riskScore += 0.15; activeCue = Math.max(activeCue, 7); }
+      if (s.reclaim === 'stable') { riskScore -= 0.75; }
+      if (s.reclaim === 'failed') { riskScore += 1.0; activeCue = Math.max(activeCue, 7); }
+
+      riskScore = Math.max(0, Math.min(6, riskScore));
+
+      // Metric cards
+      el('spxValue').textContent = `${fmt(s.spx, 1)}`;
+      setBadge(el('spxBadge'), below200 ? 'danger' : 'safe', below200 ? '跌穿200天線' : '企穩200天線');
+      el('spxNote').textContent = `200MA ${fmt(s.ma200, 1)}｜差距 ${fmt(Math.abs(gapPct), 2)}% ${gapPct < 0 ? '低於' : '高於'} 200MA`;
+
+      el('vixValue').textContent = fmt(s.vix, 1);
+      setBadge(el('vixBadge'), s.vix > 30 ? 'safe' : (s.vix >= 20 ? 'warning' : 'info'), s.vix > 30 ? '恐慌到位' : (s.vix >= 20 ? '危險區間' : '未見恐慌'));
+
+      el('spreadValue').textContent = `${fmt(s.spread, 0)} bp`;
+      setBadge(el('spreadBadge'), s.spread >= 450 ? 'danger' : (s.spread >= 400 ? 'warning' : 'safe'), s.spread >= 450 ? '信貸壓力高' : (s.spread >= 400 ? '開始警戒' : '仍算正常'));
+      el('spreadNote').textContent = s.spread >= 400 ? '已接近或進入影片警戒區。' : '仍低於影片所說的400–450bp警戒帶。';
+
+      el('sosValue').textContent = fmt(s.sos, 3);
+      setBadge(el('sosBadge'), s.sos >= 0.2 ? 'danger' : (s.sos >= 0.1 ? 'warning' : 'safe'), s.sos >= 0.2 ? '衰退警號' : (s.sos >= 0.1 ? '需留意' : '遠低門檻'));
+      el('sosNote').textContent = `門檻 0.200｜現值 ${fmt(s.sos, 3)}`;
+
+      // Overall state
+      let stateTone = 'info';
+      let overallTitle = '觀察中';
+      let overallDesc = '目前仍在觀察帶。';
+      let actionBias = '耐心等待';
+
+      if (below200 && riskScore >= 3.4) {
+        stateTone = 'danger';
+        overallTitle = '偏向真熊市 / 需防守';
+        overallDesc = '跌穿200天線只是起點；信用、衰退、不可逆因素或再次跌破等訊號同時惡化，已接近影片說的真正高風險區。';
+        actionBias = '防守優先';
+      } else if (below200 && riskScore >= 1.2) {
+        stateTone = 'warning';
+        overallTitle = '跌穿200天線，但較像事件驅動修正';
+        overallDesc = '警號已出現，但若信貸利差與SOS未亮紅燈，這更像是假跌破或事件驅動修正，而非結構性熊市。';
+        actionBias = buySignals >= 2 ? '可分批部署' : '先觀察';
+      } else if (!below200 && s.reclaim === 'stable') {
+        stateTone = 'safe';
+        overallTitle = '已收復並企穩';
+        overallDesc = '影片強調真正要看的是收復後能否企穩。若已穩守200天線，風險明顯下降。';
+        actionBias = '正常部署';
+      } else if (!below200) {
+        stateTone = 'safe';
+        overallTitle = '仍在200天線之上';
+        overallDesc = '尚未出現影片最核心的技術警號。可維持正常監察。';
+        actionBias = '正常部署';
+      }
+
+      if (buySignals === 3 && riskScore < 4.5) {
+        overallDesc += ' 同時，三個技術買入條件已齊：VIX>30、T2108<10、回撤>10%。這接近影片定義的高於平均回報區。';
+        actionBias = '長線買點接近';
+      }
+
+      setBadge(el('stateBadge'), stateTone, stateTone === 'danger' ? '高風險' : stateTone === 'warning' ? '警戒' : stateTone === 'safe' ? '較安全' : '分析中');
+      el('overallTitle').textContent = overallTitle;
+      el('overallDesc').textContent = overallDesc;
+      el('scenarioSummary').textContent = `${history.label}｜${history.tilt}｜觸發原因：${el('trigger').selectedOptions[0].text}｜可撤回性：${el('reversible').selectedOptions[0].text}`;
+      el('riskScore').textContent = fmt(riskScore, 1);
+      el('buyScore').textContent = `${buySignals} / 3`;
+      el('historyTilt').textContent = history.label;
+      el('actionBias').textContent = actionBias;
+
+      const checks = [
+        {
+          title: '是否跌穿200天線',
+          note: below200 ? '已跌穿，符合影片最初警號。' : '未跌穿，核心警號未觸發。',
+          status: below200 ? '是' : '否',
+          tone: below200 ? 'danger' : 'safe'
+        },
+        {
+          title: '信用利差是否升至危險帶',
+          note: s.spread >= 400 ? '已接近或進入400–450bp警戒帶。' : '仍低於影片警戒區。',
+          status: `${fmt(s.spread,0)} bp`,
+          tone: s.spread >= 450 ? 'danger' : (s.spread >= 400 ? 'warning' : 'safe')
+        },
+        {
+          title: 'Richmond Fed SOS 是否顯示衰退',
+          note: s.sos >= 0.2 ? '已越過0.2門檻。' : '仍未到衰退門檻。',
+          status: fmt(s.sos,3),
+          tone: s.sos >= 0.2 ? 'danger' : (s.sos >= 0.1 ? 'warning' : 'safe')
+        },
+        {
+          title: '觸發原因是否可撤回',
+          note: s.reversible === 'yes' ? '較像短期事件。' : (s.reversible === 'mixed' ? '需再觀察。' : '不可逆因素偏多。'),
+          status: el('reversible').selectedOptions[0].text,
+          tone: s.reversible === 'yes' ? 'safe' : (s.reversible === 'mixed' ? 'warning' : 'danger')
+        },
+        {
+          title: 'VIX 是否進入高回報區',
+          note: s.vix > 30 ? '符合影片所說的極度恐慌門檻。' : '20–30 區間反而是尷尬危險帶。',
+          status: fmt(s.vix,1),
+          tone: s.vix > 30 ? 'safe' : (s.vix >= 20 ? 'warning' : 'info')
+        },
+        {
+          title: 'T2108 是否極度超賣',
+          note: s.t2108 <= 10 ? '市場廣度已非常弱。' : '未到影片定義的極端超賣。',
+          status: `${fmt(s.t2108,2)}%`,
+          tone: s.t2108 <= 10 ? 'safe' : 'warning'
+        },
+        {
+          title: '回撤幅度是否達10%',
+          note: s.drawdown >= 10 ? '已進入較值得關注的歷史區域。' : '仍未達影片所說的買點帶。',
+          status: `${fmt(s.drawdown,1)}%`,
+          tone: s.drawdown >= 10 ? 'safe' : 'warning'
+        },
+        {
+          title: '收復200天線後表現',
+          note: s.reclaim === 'stable' ? '真正正面。' : (s.reclaim === 'quick' ? '快速收復不一定安全。' : s.reclaim === 'failed' ? '收復失敗再跌破，危險。' : '仍未收復。'),
+          status: el('reclaim').selectedOptions[0].text,
+          tone: s.reclaim === 'stable' ? 'safe' : (s.reclaim === 'failed' ? 'danger' : 'warning')
+        }
+      ];
+      renderChecks(checks);
+
+      renderTimeline(activeCue);
+      setActiveCue(activeCue);
+      saveState();
+    }
+
+    function exportJSON() {
+      const json = JSON.stringify(getState(), null, 2);
+      el('jsonBox').value = json;
+    }
+
+    function importJSON() {
       try {
-        const state = JSON.parse(raw);
-        Object.entries(state).forEach(([k,v]) => { if ($(k)) $(k).value = v; });
-      } catch (_) {}
+        const parsed = JSON.parse(el('jsonBox').value);
+        applyState({ ...defaults, ...parsed });
+      } catch (err) {
+        alert('JSON 格式有錯，請檢查後再試。');
+      }
     }
 
-    function loadVideoValues() {
-      $('sp500').value = 6506;
-      $('ma200').value = 6621;
-      $('vix').value = 27;
-      $('spread').value = 327;
-      $('sos').value = 0.042;
-      $('poly').value = 35;
-      $('t2108').value = 16.74;
-      $('drawdown').value = 7.5;
-      $('holdDays').value = 214;
-      $('triggerType').value = 'macro';
-      $('reversible').value = 'yes';
-      $('reclaimStable').value = 'unknown';
-      $('asOf').textContent = '影片示例';
-      render();
-      status('已載入影片數值');
+    async function copySummary() {
+      const text = [
+        `狀態：${el('overallTitle').textContent}`,
+        `描述：${el('overallDesc').textContent}`,
+        `熊市風險分數：${el('riskScore').textContent}`,
+        `買入準備分數：${el('buyScore').textContent}`,
+        `歷史組別：${el('historyTilt').textContent}`,
+        `部署建議：${el('actionBias').textContent}`
+      ].join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        el('jsonBox').value = text;
+      }
     }
 
-    document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', render));
-    document.querySelectorAll('.time-btn').forEach(btn => btn.addEventListener('click', () => status(`對應影片時間：${btn.dataset.time}`)));
-    $('refreshBtn').addEventListener('click', async () => {
-      try { await loadLive(); } catch (err) { status(`讀取失敗：${err.message}`); }
-    });
-    $('saveBtn').addEventListener('click', saveLocal);
-    $('loadVideoBtn').addEventListener('click', loadVideoValues);
+    function bind() {
+      ids.forEach(id => el(id).addEventListener('input', render));
+      ids.forEach(id => el(id).addEventListener('change', render));
 
-    loadLocal();
-    loadLive().catch(err => {
-      status(`讀取失敗：${err.message}`);
-      render();
-    });
+      el('btnLive').addEventListener('click', fetchLiveCoreData);
+      el('btnRefreshCore').addEventListener('click', fetchLiveCoreData);
+      el('btnComputeSOS').addEventListener('click', recomputeSOSOnly);
+      el('btnTranscript').addEventListener('click', () => applyState(defaults));
+      el('btnMacro').addEventListener('click', () => applyState(macroScenario));
+      el('btnBear').addEventListener('click', () => applyState(bearScenario));
+      el('btnReset').addEventListener('click', () => {
+        localStorage.removeItem(STORAGE_KEY);
+        applyState(defaults);
+        el('jsonBox').value = '';
+      });
+      el('btnExport').addEventListener('click', exportJSON);
+      el('btnImport').addEventListener('click', importJSON);
+      el('btnCopy').addEventListener('click', copySummary);
+      el('btnOpenFRED').addEventListener('click', () => window.open(DATA_LINKS.fredSP500, '_blank'));
+      el('btnOpenVIXNote').addEventListener('click', () => window.open(DATA_LINKS.cboeVix, '_blank'));
+      el('btnOpenT2108Note').addEventListener('click', () => window.open(DATA_LINKS.t2108, '_blank'));
+      el('btnLoadCsvHelp').addEventListener('click', openCsvHelp);
+      wireFilePicker('btnFileSP500', 'fileSP500', 'sp500');
+      wireFilePicker('btnFileVIX', 'fileVIX', 'vix');
+      wireFilePicker('btnFileSpread', 'fileSpread', 'spread');
+      wireFilePicker('btnFileIURSA', 'fileIURSA', 'iursa');
+    }
+
+    bind();
+    el('holdDaysAuto').value = '';
+    applyState(loadState() || defaults);
   </script>
 </body>
 </html>
