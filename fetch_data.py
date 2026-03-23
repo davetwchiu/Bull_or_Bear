@@ -21,7 +21,14 @@ def calculate_at50():
     """自家製 $SPXA50R：計算 S&P 500 有幾多 % 股票高於 50天線"""
     print("正在從 Wikipedia 獲取 S&P 500 成份股名單...")
     url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-    table = pd.read_html(url)[0]
+    
+    # 👇 加入 User-Agent 扮成 Chrome 瀏覽器，破解 Wikipedia 403 阻擋
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    html_data = requests.get(url, headers=headers).text
+    table = pd.read_html(html_data)[0]
+    
     tickers = table['Symbol'].tolist()
     
     # 修正 Yahoo Finance 格式 (例如 BRK.B 轉 BRK-B)
