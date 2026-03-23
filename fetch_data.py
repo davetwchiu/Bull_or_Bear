@@ -21,12 +21,14 @@ def main():
     try:
         print("正在獲取市場數據...")
         
-        # 1. 獲取 S&P 500 (拎 600 日數據，因為要計歷史 200MA，再向前數企穩日數)
+        # ==========================================
+        # 1. 獲取 S&P 500 及計算 200天線 / 企穩日數
+        # ==========================================
         sp500_history = get_fred_data('SP500', limit=600)
         sp500_current = sp500_history[0]
-        ma200_current = sum(sp500_history[:200]) / 200
+        ma200 = sum(sp500_history[:200]) / 200
 
-        # --- 新增：自動計算「企穩 200天線日數」 ---
+        # 自動計算「跌破前連續企穩 200天線日數」
         stable_days = 0
         streak_started = False
         
@@ -42,51 +44,48 @@ def main():
                 stable_days += 1
             else:
                 if streak_started:
-                    # 如果之前係「企穩(True)」，而家遇到「跌穿(False)」，代表個 streak 完咗，停止計算
+                    # 如果之前係「企穩(True)」，而家遇到「跌穿(False)」，代表個 streak 完咗
                     break
-        # ----------------------------------------
 
+        # ==========================================
         # 2. 獲取 VIX 恐慌指數
+        # ==========================================
         vix = get_fred_data('VIXCLS', limit=10)[0]
 
-        # 3. 獲取 High Yield Credit Spread (FRED 預設為 %, 轉換為 bp x100)
+        # ==========================================
+        # 3. 獲取 High Yield Credit Spread (轉換為 bp)
+        # ==========================================
         spread_percent = get_fred_data('BAMLH0A0HYM2', limit=10)[0]
         spread_bp = spread_percent * 100
 
-       # 4. 獲取並計算 Richmond Fed SOS (基於 IURSA 數據)
-        # 官方邏輯：最新 26 週 IURSA 平均值 - 過去 52 週內該 26 週平均值嘅最低點
-        # 需要最少 26 + 52 = 78 週數據，我哋安全起見拎 100 週
+        # ==========================================
+        # 4. 獲取並計算 Richmond Fed SOS (基於 IURSA 數據)
+        # ==========================================
         iursa_history = get_fred_data('IURSA', limit=100)
-        
-        # 計算過去 52 週，每一週嘅 26 週移動平均線 (MA26)
-        # index 0 係最新嗰週
         ma26_list = []
         for i in range(52):
-            # iursa_history[i : i+26] 會拎到由第 i 週開始，向後數 26 週嘅歷史數據
             ma26 = sum(iursa_history[i : i+26]) / 26
             ma26_list.append(ma26)
             
         current_ma26 = ma26_list[0]
         min_ma26_past_52_weeks = min(ma26_list)
-        
-        # SOS 衰退指標 = 最新 MA26 - 過去一年最低嘅 MA26
-        sos = current_ma26 - min_ma26_past_52_weeks
+        sos = current_ma26 - min_ma26_past_52_weeks # SOS 衰退指標公式
 
-        # 整合輸出 JSON
+        # ==========================================
+        # 5. 整合輸出 JSON (最重要：加入咗 stable_days)
+        # ==========================================
         live_data = {
             "sp500": round(sp500_current, 2),
             "ma200": round(ma200, 2),
             "vix": round(vix, 2),
             "spread": int(spread_bp),
             "sos": round(sos, 3),
-            "stable_days": stable_days
+            "stable_days": stable_days,  # <--- 呢度就係你網頁要讀取嗰粒數！
             "last_updated": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
         }
 
-        # 確保 data 資料夾存在
+        # 確保 data 資料夾存在並寫入 JSON
         os.makedirs('data', exist_ok=True)
-        
-        # 寫入 JSON 檔案
         with open('data/live.json', 'w', encoding='utf-8') as f:
             json.dump(live_data, f, indent=4)
             
@@ -94,7 +93,7 @@ def main():
 
     except Exception as e:
         print(f"❌ 獲取數據失敗: {e}")
-        exit(1) # 讓 GitHub Actions 知道執行失敗
+        exit(1)
 
 if __name__ == "__main__":
     if not API_KEY:
