@@ -354,6 +354,12 @@
                 document.getElementById('inputSpread').value = data.spread;
                 document.getElementById('inputSOS').value = data.sos;
                 
+                // 👇 加入呢段去自動更新 AT50
+                if (data.at50 !== undefined) {
+                    document.getElementById('inputAT50').value = data.at50;
+                }
+
+                if (data.stable_days !== undefined) {
                 // 讀取 Python 計出嚟嘅 stable_days
                 if (data.stable_days !== undefined) {
                     document.getElementById('inputStableDays').value = data.stable_days;
