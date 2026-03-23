@@ -147,12 +147,14 @@ def main():
         raise RuntimeError("Failed to compute one or more derived metrics")
 
     payload = {
-        "as_of": min(last(sp500)["date"], last(vix)["date"], last(spread)["date"], last(iursa)["date"]),
+        "as_of": last(sp500)["date"],
+"marketAsOf": min(last(sp500)["date"], last(vix)["date"], last(spread)["date"]),
+"sosAsOf": last(iursa)["date"],
         "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "sp500": round(last(sp500)["value"], 2),
         "ma200": round(ma200, 2),
         "vix": round(last(vix)["value"], 2),
-        "creditSpreadBp": int(round(last(spread)["value"])),
+        "creditSpreadBp": int(round(last(spread)["value"]*100)),
         "sos": round(sos, 3),
         "drawdownPct": round(drawdown, 2),
         "holdDaysAbove200": int(hold_days),
