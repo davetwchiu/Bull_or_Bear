@@ -27,7 +27,7 @@ jobs:
           python-version: '3.10'
 
       - name: 📦 Install dependencies
-        run: pip install requests
+        run: pip install requests yfinance pandas lxml html5lib
 
       - name: 🚀 Run Python Script
         env:
