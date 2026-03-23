@@ -6,6 +6,10 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch: # 允許喺 GitHub 網頁手動撳掣執行
 
+# 加入呢行環境變數，解決 Node.js 20 Deprecation 警告
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   update-data:
     runs-on: ubuntu-latest
