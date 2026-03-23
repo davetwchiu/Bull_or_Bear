@@ -23,22 +23,19 @@
         .header-title { text-align: center; margin-bottom: 30px; }
         .header-title p { color: var(--text-muted); max-width: 600px; margin: 0 auto; }
 
-        /* 核心佈局：左右雙欄 */
         .dashboard-container { display: flex; flex-wrap: wrap; gap: 30px; max-width: 1300px; margin: 0 auto; }
         .panel-left { flex: 1 1 400px; }
         .panel-right { flex: 1 1 500px; position: sticky; top: 20px; height: fit-content; }
 
-        /* 卡片設計 */
         .card { background: var(--card-bg); border-radius: var(--border-radius); box-shadow: 0 6px 15px rgba(0,0,0,0.05); padding: 25px; margin-bottom: 20px; }
-        .card-header { font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .card-header { font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .timestamp { font-size: 0.85rem; color: var(--text-muted); font-weight: normal; }
 
-        /* 表單與輸入 */
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.95rem; }
         .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s; }
         .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 5px rgba(52, 152, 219, 0.3); }
         
-        /* 按鈕 */
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
         .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 0.9rem; }
         .btn-primary { background: var(--primary); color: white; }
@@ -46,18 +43,16 @@
         .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
         .btn-outline:hover { background: #ebf5fb; }
 
-        /* Tooltip 提示 */
         .tooltip-icon { display: inline-block; background: #e0e0e0; color: #555; border-radius: 50%; width: 18px; height: 18px; text-align: center; font-size: 12px; line-height: 18px; cursor: help; margin-left: 5px; }
         .tooltip-icon[title]:hover::after { content: attr(title); position: absolute; background: #333; color: #fff; padding: 5px 10px; border-radius: 4px; font-size: 0.85rem; white-space: nowrap; z-index: 10; margin-top: -30px; margin-left: 10px; }
 
-        /* 視覺化進度條 */
-        .score-board { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .score-board { display: flex; flex-direction: column; gap: 15px; margin-bottom: 10px; }
+        .score-info { font-size: 0.8rem; color: #95a5a6; margin-top: -10px; margin-bottom: 15px; font-style: italic; }
         .bar-container { width: 100%; background: #eee; border-radius: 8px; height: 20px; overflow: hidden; position: relative; }
         .bar-fill { height: 100%; transition: width 0.5s ease-in-out; }
         .bar-risk { background: linear-gradient(90deg, var(--warning), var(--danger)); }
         .bar-buy { background: linear-gradient(90deg, #a8e6cf, var(--success)); }
 
-        /* 數據展示 Grid */
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .metric-box { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 15px; text-align: center; }
         .metric-box h4 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--text-muted); }
@@ -68,12 +63,9 @@
         .status-warn { background: #fff3cd; color: #856404; }
         .status-danger { background: #f8d7da; color: #721c24; }
 
-        /* 總結區塊 */
         .conclusion-box { padding: 20px; border-left: 6px solid var(--primary); background: #ebf5fb; border-radius: 0 8px 8px 0; margin-top: 20px; }
         
-        @media (max-width: 900px) {
-            .panel-right { position: static; }
-        }
+        @media (max-width: 900px) { .panel-right { position: static; } }
     </style>
 </head>
 <body>
@@ -90,7 +82,7 @@
                 
                 <div class="btn-group">
                     <button class="btn btn-primary" onclick="fetchLiveRepoData()" id="btnFetchLive">🔄 載入 Repo 即時數據</button>
-                    <button class="btn btn-outline" onclick="loadVideoValues()">🎥 載入影片數值</button>
+                    <button class="btn btn-outline" onclick="loadVideoValues()">🎥 載入影片預設值</button>
                 </div>
 
                 <div class="form-group">
@@ -114,23 +106,42 @@
                     <input type="number" id="inputSOS" class="form-control" value="0.15" step="0.01">
                 </div>
                 <div class="form-group">
-                    <label>AT50 (%) <span class="tooltip-icon" title="標普500處於50天線上股票比例，低於20%視為極度超賣，係博反彈嘅參考指標">?</span></label>
+                    <label>AT50 (%) <span class="tooltip-icon" title="標普500處於50天線上股票比例，低於20%視為極度超賣">?</span></label>
                     <input type="number" id="inputAT50" class="form-control" value="20">
                 </div>
 
-                <div class="card-header" style="margin-top: 30px; font-size: 1rem;">情境設定</div>
+                <div class="card-header" style="margin-top: 30px; font-size: 1rem;">情境設定 (手動判斷)</div>
                 
                 <div class="form-group">
                     <label>跌破前已企穩200天線 (交易日) <span class="tooltip-icon" title="大過 126 日 (約 6 個月) 視為長期企穩，反彈勝率極高">?</span></label>
-                    <input type="number" id="inputStableDays" class="form-control" value="150">
+                    <input type="number" id="inputStableDays" class="form-control" value="214">
                 </div>
 
                 <div class="form-group">
-                    <label>觸發原因 (市場情緒判定)</label>
+                    <label>觸發原因</label>
                     <select class="form-control" id="triggerReason">
                         <option value="event">事件驅動 / 宏觀恐慌</option>
                         <option value="cycle">週期性 / 滯脹風險</option>
                         <option value="structure">結構性 / 信貸問題</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>原因可否撤回</label>
+                    <select class="form-control" id="triggerReversible">
+                        <option value="yes">可以 (短線衝擊)</option>
+                        <option value="partial">部分可以</option>
+                        <option value="no">不可以 (長線改變)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>收復200天線狀態</label>
+                    <select class="form-control" id="recoveryStatus">
+                        <option value="unrecovered">未收復</option>
+                        <option value="fast">5–15個交易日內快速收復</option>
+                        <option value="stable">收復後已企穩</option>
+                        <option value="failed">收復後再次跌破 (極危險)</option>
                     </select>
                 </div>
             </div>
@@ -138,7 +149,10 @@
 
         <div class="panel-right">
             <div class="card">
-                <div class="card-header">📊 實時分析結果</div>
+                <div class="card-header">
+                    <span>📊 實時分析結果</span>
+                    <span class="timestamp" id="dataTimestamp">🕒 數據: 尚未載入</span>
+                </div>
                 
                 <div class="score-board">
                     <div>
@@ -158,6 +172,7 @@
                         </div>
                     </div>
                 </div>
+                <div class="score-info">* 分數由 200MA乖離率、VIX、信用利差、SOS 指標及下方情境設定綜合計算得出。</div>
 
                 <div class="metrics-grid">
                     <div class="metric-box">
@@ -217,12 +232,12 @@
             const vix = parseFloat(document.getElementById('inputVIX').value) || 0;
             const spread = parseFloat(document.getElementById('inputSpread').value) || 0;
             const sos = parseFloat(document.getElementById('inputSOS').value) || 0;
-            
-            // ❌ 修正：已經改為讀取 inputAT50
             const at50 = parseFloat(document.getElementById('inputAT50').value) || 0; 
             
             const stableDays = parseInt(document.getElementById('inputStableDays').value) || 0;
             const triggerReason = document.getElementById('triggerReason').value;
+            const triggerReversible = document.getElementById('triggerReversible').value;
+            const recoveryStatus = document.getElementById('recoveryStatus').value;
 
             // 126 個交易日大約等於半年
             const stableStatus = (stableDays >= 126) ? 'long' : 'short';
@@ -293,13 +308,14 @@
                 elStatusSOS.className = 'metric-status status-safe';
             }
 
-            // --- E. 情境與買入判定 ---
+            // --- E. 新增：情境判定加權 ---
             if (triggerReason === 'structure') riskScore += 1.0;
             if (triggerReason === 'cycle') riskScore += 0.5;
             
-            // ❌ 修正：將 t2108 <= 15 改為 at50 <= 20
-            if (at50 <= 20) buyScore += 1;  
+            if (triggerReversible === 'no') riskScore += 0.5;
+            if (recoveryStatus === 'failed') riskScore += 1.5; // 收復後再跌破係極度利淡信號
             
+            if (at50 <= 20) buyScore += 1;  
             if (spDiffPercent < 0 && riskScore < 2.5 && stableStatus === 'long') buyScore += 1;
 
             riskScore = Math.min(riskScore, 5.0);
@@ -310,15 +326,22 @@
             document.getElementById('riskBar').style.width = `${(riskScore / 5) * 100}%`;
             document.getElementById('buyBar').style.width = `${(buyScore / 3) * 100}%`;
 
-            generateAdvice(spDiffPercent, riskScore, buyScore, stableStatus, stableDays);
+            generateAdvice(spDiffPercent, riskScore, buyScore, stableStatus, stableDays, recoveryStatus);
         }
 
         // ==========================================
         // 總結生成
         // ==========================================
-        function generateAdvice(spDiffPercent, riskScore, buyScore, stableStatus, stableDays) {
+        function generateAdvice(spDiffPercent, riskScore, buyScore, stableStatus, stableDays, recoveryStatus) {
             const adviceBox = document.getElementById('finalAdvice');
             const conclusionBox = document.querySelector('.conclusion-box');
+
+            if (recoveryStatus === 'failed') {
+                conclusionBox.style.borderLeftColor = "var(--danger)";
+                conclusionBox.style.background = "#fdeded";
+                adviceBox.innerHTML = `<strong style="color:var(--danger); font-size:1.1rem;">🚨 極高風險: 200天線由支持變阻力！</strong><br><br>大市曾嘗試收復 200天線但失敗再次跌破，這是典型結構性熊市的確認信號。強烈建議大幅減低倉位，做好對沖防守。`;
+                return;
+            }
 
             if (spDiffPercent < 0 && riskScore >= 3.0) {
                 conclusionBox.style.borderLeftColor = "var(--danger)";
@@ -331,7 +354,6 @@
                     ? `跌破前已連續企穩 <b>${stableDays} 個交易日</b>（超過半年），後續 12 個月正回報機率極高（達 82%）。` 
                     : `但留意之前只企穩咗 <b>${stableDays} 個交易日</b>，根基較弱，反彈未必長久。`;
                 
-                // ❌ 修正：字眼由 T2108 改為 AT50
                 adviceBox.innerHTML = `<strong style="color:#b8860b; font-size:1.1rem;">⚠️ 注意: 200天線失守，但傾向為「事件驅動假訊號」。</strong><br><br>大市雖然跌破 200MA，但基本面與流動性未見紅燈。${historyText}<br><br><b>買入準備：${buyScore}/3</b>。若 VIX 飆升或 AT50 進入極度超賣，可視為黃金分批吸納機會。`;
             } else {
                 conclusionBox.style.borderLeftColor = "var(--success)";
@@ -373,7 +395,10 @@
                 updateDashboard();
                 saveToLocalStorage();
 
-                alert(`✅ 成功載入最新市場數據！\n最後更新時間 (UTC): ${data.last_updated}`);
+                // 💡 聽取 ChatGPT 建議：將時間靜靜地顯示喺版面上，取消煩人嘅 Alert 彈出
+                document.getElementById('dataTimestamp').innerHTML = `🕒 數據更新於: <b>${data.last_updated}</b>`;
+                document.getElementById('dataTimestamp').style.color = "var(--primary)";
+
             } catch (error) {
                 console.error("讀取 live.json 失敗:", error);
                 alert("❌ 無法載入實時數據！\n請確定 GitHub Actions 已經成功運行，並且 data/live.json 檔案存在。");
@@ -392,12 +417,11 @@
             document.getElementById('inputVIX').value = 25.4;
             document.getElementById('inputSpread').value = 380;
             document.getElementById('inputSOS').value = 0.15;
-            
-            // ❌ 修正：改為 inputAT50
             document.getElementById('inputAT50').value = 20; 
-            
             document.getElementById('inputStableDays').value = 214; 
             document.getElementById('triggerReason').value = 'event';
+            document.getElementById('triggerReversible').value = 'yes';
+            document.getElementById('recoveryStatus').value = 'unrecovered';
             updateDashboard();
             saveToLocalStorage();
         }
@@ -409,18 +433,17 @@
                 vix: document.getElementById('inputVIX').value,
                 spread: document.getElementById('inputSpread').value,
                 sos: document.getElementById('inputSOS').value,
-                
-                // ❌ 修正：改為 at50
                 at50: document.getElementById('inputAT50').value, 
-                
                 stableDays: document.getElementById('inputStableDays').value,
-                reason: document.getElementById('triggerReason').value
+                reason: document.getElementById('triggerReason').value,
+                reversible: document.getElementById('triggerReversible').value,
+                recovery: document.getElementById('recoveryStatus').value
             };
-            localStorage.setItem('bullBearDashboard_v3', JSON.stringify(data)); // 轉咗新版，改名防撞 cache
+            localStorage.setItem('bullBearDashboard_v4', JSON.stringify(data));
         }
 
         function loadFromLocalStorage() {
-            const saved = localStorage.getItem('bullBearDashboard_v3');
+            const saved = localStorage.getItem('bullBearDashboard_v4');
             if (saved) {
                 const data = JSON.parse(saved);
                 if(data.sp500) document.getElementById('inputSP500').value = data.sp500;
@@ -428,12 +451,11 @@
                 if(data.vix) document.getElementById('inputVIX').value = data.vix;
                 if(data.spread) document.getElementById('inputSpread').value = data.spread;
                 if(data.sos) document.getElementById('inputSOS').value = data.sos;
-                
-                // ❌ 修正：改為 at50
                 if(data.at50) document.getElementById('inputAT50').value = data.at50; 
-                
                 if(data.stableDays) document.getElementById('inputStableDays').value = data.stableDays;
                 if(data.reason) document.getElementById('triggerReason').value = data.reason;
+                if(data.reversible) document.getElementById('triggerReversible').value = data.reversible;
+                if(data.recovery) document.getElementById('recoveryStatus').value = data.recovery;
             }
         }
     </script>
