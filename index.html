@@ -268,7 +268,7 @@
         <p>按影片邏輯重建：先看跌穿200天線，再分辨事件驅動修正，還是結構性熊市。</p>
       </div>
       <div class="btn-row">
-        <button id="btnLive">抓取即時核心數據</button>
+        <button id="btnLive">載入 repo 即時數據</button>
         <button id="btnTranscript">載入影片數值</button>
         <button id="btnMacro" class="secondary">宏觀恐慌情景</button>
         <button id="btnBear" class="warn">結構性熊市場景</button>
@@ -279,16 +279,16 @@
     <div class="layout">
       <aside class="panel controls">
         <h2>控制面板</h2>
-        <p class="subtle">所有數值一改即時計分。資料會自動存到瀏覽器。可直接抓取 FRED 即時核心數據，並由官方每週失業保險數據即時計算 SOS。</p>
+        <p class="subtle">所有數值一改即時計分。資料會自動存到瀏覽器。GitHub Pages 版會讀取 repo 內的 <span class="mono">data/live.json</span>。該檔案由 GitHub Actions 定時更新：FRED 取 SP500、VIX、Spread、IURSA，再自動計算 200 天線、回撤、企穩日數和 SOS。</p>
 
         <div class="control-group" style="padding-top:0; border-top:0; margin-top:12px;">
           <div class="btn-row" style="margin-bottom:8px;">
-            <button id="btnRefreshCore" class="secondary">更新核心數據</button>
-            <button id="btnComputeSOS" class="secondary">重算 SOS</button>
+            <button id="btnRefreshCore" class="secondary">重新載入 repo 數據</button>
+            <button id="btnComputeSOS" class="secondary">重載 SOS</button>
             <button id="btnLoadCsvHelp" class="ghost">CSV 匯入說明</button>
           </div>
-          <div id="liveStatus" class="subtle">尚未抓取即時數據。</div>
-          <div id="liveHint" class="subtle" style="margin-top:6px;">若以 <span class="mono">file://</span> 直接打開，瀏覽器較易擋跨站抓取。這時可改用本機小伺服器，或下載 FRED CSV 後匯入。</div>
+          <div id="liveStatus" class="subtle">尚未載入 repo 即時數據。</div>
+          <div id="liveHint" class="subtle" style="margin-top:6px;">GitHub Pages 版不再直接跨站抓 FRED；而是讀取同 repo 的 <span class="mono">data/live.json</span>。若此檔未生成，請先在 GitHub 的 Actions 頁手動跑一次 workflow。</div>
         </div>
 
         <div class="control-group">
@@ -663,7 +663,7 @@
     }
 
     function openCsvHelp() {
-      alert('抓取失敗時的做法：\n\n1. 到 FRED 系列頁按 Download Data 下載 CSV。\n2. SP500 匯入後會自動重算 200 天線、回撤、企穩日數。\n3. IURSA 匯入後會自動重算 SOS。\n4. VIX 與 Spread 匯入後會更新對應欄位。\n\n若想直接抓取網上數據，請用本機小伺服器開啟此檔，而不是 file://。');
+      alert('抓取失敗時的做法：\n\n1. 到 FRED 系列頁按 Download Data 下載 CSV。\n2. SP500 匯入後會自動重算 200 天線、回撤、企穩日數。\n3. IURSA 匯入後會自動重算 SOS。\n4. VIX 與 Spread 匯入後會更新對應欄位。\n\nGitHub Pages 建議改用 GitHub Actions 先生成 data/live.json。若只是在本機預覽，仍可用 CSV 匯入。');
     }
 
     function wireFilePicker(buttonId, inputId, kind) {
@@ -756,62 +756,47 @@
       return current - priorMin;
     }
 
-    async function fetchLiveCoreData() {
-      setStatus('正在抓取 FRED 核心數據…');
-      try {
-        const [sp500Series, vixSeries, spreadSeries, iursaSeries] = await Promise.all([
-          fetchFredSeries(FRED_CSV.sp500),
-          fetchFredSeries(FRED_CSV.vix),
-          fetchFredSeries(FRED_CSV.spread),
-          fetchFredSeries(FRED_CSV.iursa)
-        ]);
+    
+async function fetchLiveCoreData() {
+  setStatus('正在讀取 repo 的 data/live.json…');
+  try {
+    const url = new URL('data/live.json', window.location.href);
+    url.searchParams.set('ts', Date.now());
+    const res = await fetch(url.toString(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
 
-        const spValues = sp500Series.map(x => x.value).filter(v => Number.isFinite(v));
-        const spLast = lastValid(sp500Series);
-        const vixLast = lastValid(vixSeries);
-        const spreadLast = lastValid(spreadSeries);
-        const ma200 = computeMA(spValues, 200);
-        const drawdown = computeDrawdownFromTrailingPeak(spValues, 252);
-        const holdDaysAuto = computeHoldDaysAround200(spValues);
-        const sos = computeSOSFromIURSA(iursaSeries);
-
-        if (spLast) el('spx').value = spLast.value.toFixed(1);
-        if (ma200 != null) el('ma200').value = ma200.toFixed(1);
-        if (vixLast) el('vix').value = vixLast.value.toFixed(2);
-        if (spreadLast) el('spread').value = Math.round(spreadLast.value);
-        if (drawdown != null) el('drawdown').value = drawdown.toFixed(1);
-        if (holdDaysAuto != null) {
-          el('holdDaysAuto').value = holdDaysAuto;
-          if (!Number(el('holdDays').value)) el('holdDays').value = holdDaysAuto;
-        }
-        if (sos != null) el('sos').value = sos.toFixed(3);
-
-        const latestDates = [spLast?.date, vixLast?.date, spreadLast?.date, lastValid(iursaSeries)?.date].filter(Boolean);
-        setStatus(`已更新：SPX ${spLast?.date || '--'}｜VIX ${vixLast?.date || '--'}｜Spread ${spreadLast?.date || '--'}｜IURSA ${lastValid(iursaSeries)?.date || '--'}`, 'ok');
-        render();
-      } catch (err) {
-        console.error(err);
-        const localFile = location.protocol === 'file:';
-        const hint = localFile ? '你現在似乎是用 file:// 打開；很多瀏覽器會因此擋跨站抓取。可改用本機小伺服器，或下載 FRED CSV 後匯入。' : '可能是來源站跨站限制、網絡、或暫時封鎖。可先下載 FRED CSV 後匯入。';
-        setStatus(`抓取失敗：${err.message}。${hint}`, 'error');
-      }
+    if (Number.isFinite(Number(d.sp500))) el('spx').value = Number(d.sp500).toFixed(1);
+    if (Number.isFinite(Number(d.ma200))) el('ma200').value = Number(d.ma200).toFixed(1);
+    if (Number.isFinite(Number(d.vix))) el('vix').value = Number(d.vix).toFixed(2);
+    if (Number.isFinite(Number(d.creditSpreadBp))) el('spread').value = Math.round(Number(d.creditSpreadBp));
+    if (Number.isFinite(Number(d.sos))) el('sos').value = Number(d.sos).toFixed(3);
+    if (Number.isFinite(Number(d.drawdownPct))) el('drawdown').value = Number(d.drawdownPct).toFixed(1);
+    if (Number.isFinite(Number(d.holdDaysAbove200))) {
+      el('holdDaysAuto').value = Math.round(Number(d.holdDaysAbove200));
+      if (!Number(el('holdDays').value)) el('holdDays').value = Math.round(Number(d.holdDaysAbove200));
+    }
+    if (d.polymarketRecessionProb !== undefined && d.polymarketRecessionProb !== null && Number.isFinite(Number(d.polymarketRecessionProb))) {
+      el('poly').value = Math.round(Number(d.polymarketRecessionProb));
     }
 
-    async function recomputeSOSOnly() {
-      setStatus('正在以 IURSA 重算 SOS…');
-      try {
-        const series = await fetchFredSeries(FRED_CSV.iursa);
-        const sos = computeSOSFromIURSA(series);
-        const last = lastValid(series);
-        if (sos == null) throw new Error('IURSA 歷史樣本不足');
-        el('sos').value = sos.toFixed(3);
-        setStatus(`SOS 已重算：${sos.toFixed(3)}（IURSA 截至 ${last?.date || '--'}）`, 'ok');
-        render();
-      } catch (err) {
-        console.error(err);
-        setStatus(`SOS 重算失敗：${err.message}`, 'error');
-      }
-    }
+    const asOf = d.as_of || '--';
+    const parts = [];
+    if (d.latestDates?.sp500) parts.push(`SPX ${d.latestDates.sp500}`);
+    if (d.latestDates?.vix) parts.push(`VIX ${d.latestDates.vix}`);
+    if (d.latestDates?.spread) parts.push(`Spread ${d.latestDates.spread}`);
+    if (d.latestDates?.iursa) parts.push(`IURSA ${d.latestDates.iursa}`);
+    setStatus(`已載入 repo 數據：as of ${asOf}${parts.length ? '｜' + parts.join('｜') : ''}`, 'ok');
+    render();
+  } catch (err) {
+    console.error(err);
+    setStatus(`讀取失敗：${err.message}。請確認 repo 內已有 data/live.json，並在 GitHub 的 Actions 頁手動跑一次 workflow。若只是本機預覽，仍可用 CSV 匯入。`, 'error');
+  }
+}
+
+async function recomputeSOSOnly() {
+  return fetchLiveCoreData();
+}
 
     function render() {
       const s = {
