@@ -114,8 +114,8 @@
                     <input type="number" id="inputSOS" class="form-control" value="0.15" step="0.01">
                 </div>
                 <div class="form-group">
-                    <label>T2108 (%) <span class="tooltip-icon" title="紐交所處於40天線上股票比例，低於15%為超賣區">?</span></label>
-                    <input type="number" id="inputT2108" class="form-control" value="20">
+                    <label>AT50 (%) <span class="tooltip-icon" title="標普500處於50天線上股票比例，低於20%視為極度超賣，係博反彈嘅參考指標">?</span></label>
+                    <input type="number" id="inputAT50" class="form-control" value="20">
                 </div>
 
                 <div class="card-header" style="margin-top: 30px; font-size: 1rem;">情境設定</div>
@@ -217,7 +217,10 @@
             const vix = parseFloat(document.getElementById('inputVIX').value) || 0;
             const spread = parseFloat(document.getElementById('inputSpread').value) || 0;
             const sos = parseFloat(document.getElementById('inputSOS').value) || 0;
-            const t2108 = parseFloat(document.getElementById('inputT2108').value) || 0;
+            
+            // ❌ 修正：已經改為讀取 inputAT50
+            const at50 = parseFloat(document.getElementById('inputAT50').value) || 0; 
+            
             const stableDays = parseInt(document.getElementById('inputStableDays').value) || 0;
             const triggerReason = document.getElementById('triggerReason').value;
 
@@ -293,7 +296,10 @@
             // --- E. 情境與買入判定 ---
             if (triggerReason === 'structure') riskScore += 1.0;
             if (triggerReason === 'cycle') riskScore += 0.5;
-            if (t2108 <= 15) buyScore += 1; 
+            
+            // ❌ 修正：將 t2108 <= 15 改為 at50 <= 20
+            if (at50 <= 20) buyScore += 1;  
+            
             if (spDiffPercent < 0 && riskScore < 2.5 && stableStatus === 'long') buyScore += 1;
 
             riskScore = Math.min(riskScore, 5.0);
@@ -324,7 +330,9 @@
                 let historyText = stableStatus === 'long' 
                     ? `跌破前已連續企穩 <b>${stableDays} 個交易日</b>（超過半年），後續 12 個月正回報機率極高（達 82%）。` 
                     : `但留意之前只企穩咗 <b>${stableDays} 個交易日</b>，根基較弱，反彈未必長久。`;
-                adviceBox.innerHTML = `<strong style="color:#b8860b; font-size:1.1rem;">⚠️ 注意: 200天線失守，但傾向為「事件驅動假訊號」。</strong><br><br>大市雖然跌破 200MA，但基本面與流動性未見紅燈。${historyText}<br><br><b>買入準備：${buyScore}/3</b>。若 VIX 飆升或 T2108 進入極度超賣，可視為黃金分批吸納機會。`;
+                
+                // ❌ 修正：字眼由 T2108 改為 AT50
+                adviceBox.innerHTML = `<strong style="color:#b8860b; font-size:1.1rem;">⚠️ 注意: 200天線失守，但傾向為「事件驅動假訊號」。</strong><br><br>大市雖然跌破 200MA，但基本面與流動性未見紅燈。${historyText}<br><br><b>買入準備：${buyScore}/3</b>。若 VIX 飆升或 AT50 進入極度超賣，可視為黃金分批吸納機會。`;
             } else {
                 conclusionBox.style.borderLeftColor = "var(--success)";
                 conclusionBox.style.background = "#eefaf3";
@@ -354,12 +362,10 @@
                 document.getElementById('inputSpread').value = data.spread;
                 document.getElementById('inputSOS').value = data.sos;
                 
-                // 👇 加入呢段去自動更新 AT50
                 if (data.at50 !== undefined) {
                     document.getElementById('inputAT50').value = data.at50;
                 }
 
-                // 讀取 Python 計出嚟嘅 stable_days
                 if (data.stable_days !== undefined) {
                     document.getElementById('inputStableDays').value = data.stable_days;
                 }
@@ -386,8 +392,11 @@
             document.getElementById('inputVIX').value = 25.4;
             document.getElementById('inputSpread').value = 380;
             document.getElementById('inputSOS').value = 0.15;
-            document.getElementById('inputT2108').value = 20;
-            document.getElementById('inputStableDays').value = 214; // 影片提到企穩 214 日
+            
+            // ❌ 修正：改為 inputAT50
+            document.getElementById('inputAT50').value = 20; 
+            
+            document.getElementById('inputStableDays').value = 214; 
             document.getElementById('triggerReason').value = 'event';
             updateDashboard();
             saveToLocalStorage();
@@ -400,15 +409,18 @@
                 vix: document.getElementById('inputVIX').value,
                 spread: document.getElementById('inputSpread').value,
                 sos: document.getElementById('inputSOS').value,
-                t2108: document.getElementById('inputT2108').value,
+                
+                // ❌ 修正：改為 at50
+                at50: document.getElementById('inputAT50').value, 
+                
                 stableDays: document.getElementById('inputStableDays').value,
                 reason: document.getElementById('triggerReason').value
             };
-            localStorage.setItem('bullBearDashboard_v2', JSON.stringify(data));
+            localStorage.setItem('bullBearDashboard_v3', JSON.stringify(data)); // 轉咗新版，改名防撞 cache
         }
 
         function loadFromLocalStorage() {
-            const saved = localStorage.getItem('bullBearDashboard_v2');
+            const saved = localStorage.getItem('bullBearDashboard_v3');
             if (saved) {
                 const data = JSON.parse(saved);
                 if(data.sp500) document.getElementById('inputSP500').value = data.sp500;
@@ -416,7 +428,10 @@
                 if(data.vix) document.getElementById('inputVIX').value = data.vix;
                 if(data.spread) document.getElementById('inputSpread').value = data.spread;
                 if(data.sos) document.getElementById('inputSOS').value = data.sos;
-                if(data.t2108) document.getElementById('inputT2108').value = data.t2108;
+                
+                // ❌ 修正：改為 at50
+                if(data.at50) document.getElementById('inputAT50').value = data.at50; 
+                
                 if(data.stableDays) document.getElementById('inputStableDays').value = data.stableDays;
                 if(data.reason) document.getElementById('triggerReason').value = data.reason;
             }
