@@ -3,175 +3,172 @@ import json
 import math
 import os
 import sys
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-import requests
+API_BASE = "https://api.stlouisfed.org/fred/series/observations"
 
 
-FRED_API_KEY = os.environ.get("FRED_API_KEY", "").strip()
-POLYMARKET_RECESSION_PROB = os.environ.get("POLYMARKET_RECESSION_PROB", "").strip()
+def require_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise SystemExit(f"Missing required environment variable: {name}")
+    return value
 
 
-def fred_series(series_id: str):
-    if not FRED_API_KEY:
-        raise RuntimeError("FRED_API_KEY is missing")
-
-    url = "https://api.stlouisfed.org/fred/series/observations"
+def fetch_fred_series(series_id: str, api_key: str, observation_start: str):
     params = {
         "series_id": series_id,
-        "api_key": FRED_API_KEY,
+        "api_key": api_key,
         "file_type": "json",
         "sort_order": "asc",
+        "observation_start": observation_start,
     }
-    r = requests.get(url, params=params, timeout=30)
-    r.raise_for_status()
-    data = r.json()
-
-    out = []
-    for obs in data.get("observations", []):
-        v = obs.get("value", ".")
-        if v in (".", "", None):
-            continue
+    url = API_BASE + "?" + urllib.parse.urlencode(params)
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        payload = json.load(resp)
+    observations = []
+    for row in payload.get("observations", []):
+        value = row.get("value")
         try:
-            out.append((obs["date"], float(v)))
-        except Exception:
+            number = float(value)
+        except (TypeError, ValueError):
             continue
-    return out
+        if math.isfinite(number):
+            observations.append({"date": row.get("date"), "value": number})
+    if not observations:
+        raise RuntimeError(f"No observations returned for {series_id}")
+    return observations
 
 
-def last_value(series):
-    if not series:
+def mean(values):
+    return sum(values) / len(values)
+
+
+def compute_ma(values, period):
+    if len(values) < period:
         return None
-    return series[-1][1]
+    return mean(values[-period:])
 
 
-def moving_average(values, window: int):
-    if len(values) < window:
-        return None
-    return sum(values[-window:]) / window
-
-
-def trailing_drawdown_pct(values, lookback: int = 252):
+def compute_drawdown(values, lookback=252):
     if not values:
         return None
-    chunk = values[-lookback:] if len(values) >= lookback else values[:]
-    peak = max(chunk)
-    last = chunk[-1]
+    window = values[-lookback:] if len(values) >= lookback else values
+    peak = max(window)
+    last = window[-1]
     if peak <= 0:
         return None
-    return (peak - last) / peak * 100.0
+    return ((peak - last) / peak) * 100.0
 
 
-def hold_days_above_200dma(spx_values):
-    if len(spx_values) < 201:
+def compute_hold_days_around_200(prices):
+    if len(prices) < 220:
         return None
-
-    ma200_list = []
-    for i in range(len(spx_values)):
-        if i + 1 < 200:
-            ma200_list.append(None)
+    ma = []
+    for i in range(len(prices)):
+        if i < 199:
+            ma.append(None)
         else:
-            ma200_list.append(sum(spx_values[i - 199:i + 1]) / 200.0)
-
-    if ma200_list[-1] is None:
+            ma.append(mean(prices[i - 199:i + 1]))
+    above = [None if ma[i] is None else prices[i] >= ma[i] for i in range(len(prices))]
+    idx = len(above) - 1
+    while idx >= 0 and above[idx] is None:
+        idx -= 1
+    if idx < 0:
         return None
-
-    last_price = spx_values[-1]
-    last_ma = ma200_list[-1]
-
-    if last_price >= last_ma:
+    if above[idx] is False:
         count = 0
-        i = len(spx_values) - 1
-        while i >= 0 and ma200_list[i] is not None and spx_values[i] >= ma200_list[i]:
+        idx -= 1
+        while idx >= 0 and above[idx] is True:
             count += 1
-            i -= 1
+            idx -= 1
         return count
-
     count = 0
-    i = len(spx_values) - 2
-    while i >= 0 and ma200_list[i] is not None and spx_values[i] >= ma200_list[i]:
+    while idx >= 0 and above[idx] is True:
         count += 1
-        i -= 1
+        idx -= 1
     return count
 
 
-def compute_sos_from_iursa(iursa_values):
-    if len(iursa_values) < 26:
+def compute_sos_from_iursa(series):
+    values = [row["value"] for row in series]
+    if len(values) < 78:
         return None
-
     ma26 = []
-    for i in range(len(iursa_values)):
-        if i + 1 < 26:
+    for i in range(len(values)):
+        if i < 25:
             ma26.append(None)
         else:
-            ma26.append(sum(iursa_values[i - 25:i + 1]) / 26.0)
-
-    valid_ma26 = [x for x in ma26 if x is not None]
-    if not valid_ma26:
+            ma26.append(mean(values[i - 25:i + 1]))
+    last_idx = len(ma26) - 1
+    while last_idx >= 0 and ma26[last_idx] is None:
+        last_idx -= 1
+    if last_idx < 77:
         return None
-
-    current_ma26 = valid_ma26[-1]
-
-    trailing = valid_ma26[-52:] if len(valid_ma26) >= 52 else valid_ma26[:]
-    trailing_min = min(trailing)
-
-    return current_ma26 - trailing_min
-
-
-def safe_round(x, n=3):
-    if x is None:
+    current = ma26[last_idx]
+    prior = [v for v in ma26[last_idx - 52:last_idx] if v is not None]
+    if len(prior) < 52:
         return None
-    return round(float(x), n)
+    return current - min(prior)
+
+
+def last(series):
+    return series[-1]
+
+
+def maybe_float_env(name: str):
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
 
 
 def main():
-    sp500 = fred_series("SP500")
-    vix = fred_series("VIXCLS")
-    hy = fred_series("BAMLH0A0HYM2")
-    iursa = fred_series("IURSA")
+    api_key = require_env("FRED_API_KEY")
 
-    sp500_values = [v for _, v in sp500]
-    iursa_values = [v for _, v in iursa]
+    sp500 = fetch_fred_series("SP500", api_key, "2023-01-01")
+    vix = fetch_fred_series("VIXCLS", api_key, "2024-01-01")
+    spread = fetch_fred_series("BAMLH0A0HYM2", api_key, "2024-01-01")
+    iursa = fetch_fred_series("IURSA", api_key, "2023-01-01")
 
-    sp500_last = last_value(sp500)
-    vix_last = last_value(vix)
-    hy_last = last_value(hy)
+    sp_values = [row["value"] for row in sp500]
+    ma200 = compute_ma(sp_values, 200)
+    drawdown = compute_drawdown(sp_values, 252)
+    hold_days = compute_hold_days_around_200(sp_values)
+    sos = compute_sos_from_iursa(iursa)
 
-    ma200 = moving_average(sp500_values, 200)
-    drawdown = trailing_drawdown_pct(sp500_values, 252)
-    hold_days = hold_days_above_200dma(sp500_values)
-    sos = compute_sos_from_iursa(iursa_values)
-
-    as_of_candidates = []
-    if sp500:
-        as_of_candidates.append(sp500[-1][0])
-    if vix:
-        as_of_candidates.append(vix[-1][0])
-    if hy:
-        as_of_candidates.append(hy[-1][0])
-    if iursa:
-        as_of_candidates.append(iursa[-1][0])
-
-    as_of = max(as_of_candidates) if as_of_candidates else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if ma200 is None or drawdown is None or hold_days is None or sos is None:
+        raise RuntimeError("Failed to compute one or more derived metrics")
 
     payload = {
-        "as_of": as_of,
-        "updated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "sp500": safe_round(sp500_last, 2),
-        "ma200": safe_round(ma200, 2),
-        "vix": safe_round(vix_last, 2),
-        "creditSpreadBp": int(round(hy_last)) if hy_last is not None else None,
-        "sos": safe_round(sos, 3),
-        "polymarketRecessionProb": float(POLYMARKET_RECESSION_PROB) if POLYMARKET_RECESSION_PROB else None,
-        "drawdownPct": safe_round(drawdown, 2),
-        "holdDaysAbove200": hold_days,
+        "as_of": min(last(sp500)["date"], last(vix)["date"], last(spread)["date"], last(iursa)["date"]),
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "sp500": round(last(sp500)["value"], 2),
+        "ma200": round(ma200, 2),
+        "vix": round(last(vix)["value"], 2),
+        "creditSpreadBp": int(round(last(spread)["value"])),
+        "sos": round(sos, 3),
+        "drawdownPct": round(drawdown, 2),
+        "holdDaysAbove200": int(hold_days),
+        "polymarketRecessionProb": maybe_float_env("POLYMARKET_RECESSION_PROB"),
+        "latestDates": {
+            "sp500": last(sp500)["date"],
+            "vix": last(vix)["date"],
+            "spread": last(spread)["date"],
+            "iursa": last(iursa)["date"],
+        },
         "sources": {
-            "sp500": "FRED: SP500",
-            "vix": "FRED: VIXCLS",
-            "creditSpreadBp": "FRED: BAMLH0A0HYM2",
-            "sos_input": "FRED: IURSA",
-            "sos_method": "26-week moving average minus the minimum prior 26-week average over the trailing 52 weeks",
+            "sp500": "FRED SP500",
+            "vix": "FRED VIXCLS",
+            "spread": "FRED BAMLH0A0HYM2",
+            "iursa": "FRED IURSA",
+            "sos_method": "26-week moving average of IURSA minus prior 52-week minimum 26-week average",
         },
     }
 
@@ -183,4 +180,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())
