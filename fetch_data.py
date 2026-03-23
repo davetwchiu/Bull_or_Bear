@@ -79,6 +79,7 @@ def main():
             "vix": round(vix, 2),
             "spread": int(spread_bp),
             "sos": round(sos, 3),
+            "stable_days": stable_days
             "last_updated": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
         }
 
