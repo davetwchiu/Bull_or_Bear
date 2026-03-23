@@ -21,11 +21,30 @@ def main():
     try:
         print("正在獲取市場數據...")
         
-        # 1. 獲取 S&P 500 (拎多啲數據確保扣除假日後有足夠 200 日計 MA)
-        sp500_history = get_fred_data('SP500', limit=300)
+        # 1. 獲取 S&P 500 (拎 600 日數據，因為要計歷史 200MA，再向前數企穩日數)
+        sp500_history = get_fred_data('SP500', limit=600)
         sp500_current = sp500_history[0]
-        # 計算 200天線 (前 200 個有效交易日嘅平均值)
-        ma200 = sum(sp500_history[:200]) / 200
+        ma200_current = sum(sp500_history[:200]) / 200
+
+        # --- 新增：自動計算「企穩 200天線日數」 ---
+        stable_days = 0
+        streak_started = False
+        
+        # 迴圈由最新嗰日 (index 0) 向過去推算 250 個交易日 (大約 1 年)
+        for i in range(250):
+            price = sp500_history[i]
+            # 計算當時嗰日嘅 200MA
+            historical_ma200 = sum(sp500_history[i : i+200]) / 200
+            is_above_ma = price > historical_ma200
+
+            if is_above_ma:
+                streak_started = True
+                stable_days += 1
+            else:
+                if streak_started:
+                    # 如果之前係「企穩(True)」，而家遇到「跌穿(False)」，代表個 streak 完咗，停止計算
+                    break
+        # ----------------------------------------
 
         # 2. 獲取 VIX 恐慌指數
         vix = get_fred_data('VIXCLS', limit=10)[0]
