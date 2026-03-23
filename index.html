@@ -197,221 +197,24 @@
         </div>
     </div>
 
-   // ==========================================
-// 1. 初始化與事件監聽
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-    // 網頁載入時，先嘗試由 LocalStorage 讀取上次數據，無嘅話就用預設值
-    loadFromLocalStorage();
-    
-    // 首次載入即刻計一次數
-    updateDashboard();
+    <script>
+        // 呢度可以放返你原本計算 Logic 嘅代碼
+        // 示範用：載入影片數值
+        function loadVideoValues() {
+            document.getElementById('inputSP500').value = 6506;
+            document.getElementById('input200MA').value = 6621;
+            document.getElementById('inputVIX').value = 25.4;
+            // 觸發重新計算 UI 的 Function ...
+        }
 
-    // 監聽所有 input 同 select，一有改動即刻重新計算 + 儲存
-    const inputs = document.querySelectorAll('.form-control');
-    inputs.forEach(input => {
-        input.addEventListener('input', () => {
-            updateDashboard();
-            saveToLocalStorage();
+        // 監聽所有 Input 改變，即時更新 UI (你需要駁返你嘅計算 Function)
+        const inputs = document.querySelectorAll('.form-control');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                // calculateRiskAndBuyScores();
+                console.log("數值已更新，請接駁計算邏輯");
+            });
         });
-    });
-});
-
-// ==========================================
-// 2. 核心計算邏輯
-// ==========================================
-function updateDashboard() {
-    // 取得所有數值
-    const sp500 = parseFloat(document.getElementById('inputSP500').value) || 0;
-    const ma200 = parseFloat(document.getElementById('input200MA').value) || 0;
-    const vix = parseFloat(document.getElementById('inputVIX').value) || 0;
-    const spread = parseFloat(document.getElementById('inputSpread').value) || 0;
-    const sos = parseFloat(document.getElementById('inputSOS').value) || 0;
-    const t2108 = parseFloat(document.getElementById('inputT2108').value) || 0;
-    const triggerReason = document.getElementById('triggerReason').value;
-    const stableStatus = document.getElementById('stableStatus').value;
-
-    let riskScore = 0; // 滿分 5.0
-    let buyScore = 0;  // 滿分 3
-
-    // --- A. 判斷 S&P 500 vs 200MA ---
-    const spDiffPercent = ((sp500 - ma200) / ma200) * 100;
-    const elStatusSP500 = document.getElementById('statusSP500');
-    document.getElementById('dispSP500').innerText = sp500;
-    
-    if (spDiffPercent >= 0) {
-        elStatusSP500.innerText = `企穩 +${spDiffPercent.toFixed(1)}%`;
-        elStatusSP500.className = 'metric-status status-safe';
-    } else if (spDiffPercent >= -1.5) {
-        elStatusSP500.innerText = `誤差邊緣 ${spDiffPercent.toFixed(1)}%`;
-        elStatusSP500.className = 'metric-status status-warn';
-        riskScore += 0.5; // 輕微扣分
-    } else {
-        elStatusSP500.innerText = `跌穿 ${spDiffPercent.toFixed(1)}%`;
-        elStatusSP500.className = 'metric-status status-danger';
-        riskScore += 1.0;
-    }
-
-    // --- B. 判斷 VIX (恐慌指數) ---
-    const elStatusVIX = document.getElementById('statusVIX');
-    document.getElementById('dispVIX').innerText = vix.toFixed(1);
-    
-    if (vix >= 30) {
-        elStatusVIX.innerText = "極度恐慌";
-        elStatusVIX.className = 'metric-status status-danger';
-        riskScore += 1.0;
-        buyScore += 1; // 恐慌性拋售通常係買入時機
-    } else if (vix >= 20) {
-        elStatusVIX.innerText = "波動增加";
-        elStatusVIX.className = 'metric-status status-warn';
-        riskScore += 0.5;
-    } else {
-        elStatusVIX.innerText = "市場平靜";
-        elStatusVIX.className = 'metric-status status-safe';
-    }
-
-    // --- C. 判斷 Credit Spread (流動性) ---
-    const elStatusSpread = document.getElementById('statusSpread');
-    document.getElementById('dispSpread').innerText = `${spread} bp`;
-    
-    if (spread >= 500) {
-        elStatusSpread.innerText = "資金斷裂危險";
-        elStatusSpread.className = 'metric-status status-danger';
-        riskScore += 1.5;
-    } else if (spread >= 400) {
-        elStatusSpread.innerText = "信貸收緊戒備";
-        elStatusSpread.className = 'metric-status status-warn';
-        riskScore += 0.5;
-    } else {
-        elStatusSpread.innerText = "流動性健康";
-        elStatusSpread.className = 'metric-status status-safe';
-    }
-
-    // --- D. 判斷 Richmond SOS (衰退指標) ---
-    const elStatusSOS = document.getElementById('statusSOS');
-    document.getElementById('dispSOS').innerText = sos.toFixed(2);
-    
-    if (sos >= 0.2) {
-        elStatusSOS.innerText = "衰退亮紅燈";
-        elStatusSOS.className = 'metric-status status-danger';
-        riskScore += 1.5; // 實體經濟衰退權重最高
-    } else {
-        elStatusSOS.innerText = "未見衰退";
-        elStatusSOS.className = 'metric-status status-safe';
-    }
-
-    // --- E. 情境判定加權 ---
-    if (triggerReason === 'structure') riskScore += 1.0;
-    if (triggerReason === 'cycle') riskScore += 0.5;
-    
-    // T2108 超賣判定
-    if (t2108 <= 15) buyScore += 1; 
-
-    // 歷史勝率加分 (如果係假跌穿)
-    if (spDiffPercent < 0 && riskScore < 2.5 && stableStatus === 'long') {
-        buyScore += 1;
-    }
-
-    // ==========================================
-    // 3. 更新介面 UI (進度條與總結)
-    // ==========================================
-    
-    // 封頂處理
-    riskScore = Math.min(riskScore, 5.0);
-    buyScore = Math.min(buyScore, 3);
-
-    // 更新分數 Text
-    document.getElementById('riskScoreText').innerText = `${riskScore.toFixed(1)} / 5.0`;
-    document.getElementById('buyScoreText').innerText = `${buyScore} / 3`;
-
-    // 更新 Progress Bar 闊度
-    document.getElementById('riskBar').style.width = `${(riskScore / 5) * 100}%`;
-    document.getElementById('buyBar').style.width = `${(buyScore / 3) * 100}%`;
-
-    // 產生最終建議
-    generateAdvice(spDiffPercent, riskScore, buyScore, stableStatus);
-}
-
-// ==========================================
-// 4. 總結與建議生成
-// ==========================================
-function generateAdvice(spDiffPercent, riskScore, buyScore, stableStatus) {
-    const adviceBox = document.getElementById('finalAdvice');
-    const conclusionBox = document.querySelector('.conclusion-box');
-
-    if (spDiffPercent < 0 && riskScore >= 3.0) {
-        conclusionBox.style.borderLeftColor = "var(--danger)";
-        conclusionBox.style.background = "#fdeded";
-        adviceBox.innerHTML = `
-            <strong style="color:var(--danger); font-size:1.1rem;">🚨 REAL RISK: 觸發結構性熊市/衰退警報！</strong><br><br>
-            指數已跌穿 200天線，且宏觀基本面（如 SOS 衰退指標、信用利差）同步惡化。歷史數據顯示此情境下繼續下跌風險極高，<b>切勿急於撈底</b>，建議提高現金比例或做好對沖防守。
-        `;
-    } else if (spDiffPercent < 0 && riskScore < 3.0) {
-        conclusionBox.style.borderLeftColor = "var(--warning)";
-        conclusionBox.style.background = "#fffbea";
-        
-        let historyText = stableStatus === 'long' 
-            ? "而且跌破前已企穩超過 6 個月，後續 12 個月正回報機率達 82%。" 
-            : "但留意之前企穩 200天線時間較短，反彈未必長久。";
-
-        adviceBox.innerHTML = `
-            <strong style="color:#b8860b; font-size:1.1rem;">⚠️ 注意: 200天線失守，但傾向為「事件驅動假訊號」。</strong><br><br>
-            大市雖然跌破 200MA，但基本面與流動性未見紅燈。${historyText} 
-            <br><br><b>買入準備：${buyScore}/3</b>。若 VIX 飆升或 T2108 進入極度超賣，可視為黃金分批吸納機會。
-        `;
-    } else {
-        conclusionBox.style.borderLeftColor = "var(--success)";
-        conclusionBox.style.background = "#eefaf3";
-        adviceBox.innerHTML = `
-            <strong style="color:var(--success); font-size:1.1rem;">✅ 趨勢健康: 牛市進攻狀態</strong><br><br>
-            指數穩守 200天線之上，宏觀風險可控。順勢而為，保持既有長倉策略。若短期遇回調，只要未失守 200MA 均視為正常波動。
-        `;
-    }
-}
-
-// ==========================================
-// 5. 輔助功能 (載入影片數值、LocalStorage)
-// ==========================================
-function loadVideoValues() {
-    document.getElementById('inputSP500').value = 6506;
-    document.getElementById('input200MA').value = 6621;
-    document.getElementById('inputVIX').value = 25.4;
-    document.getElementById('inputSpread').value = 380;
-    document.getElementById('inputSOS').value = 0.15;
-    document.getElementById('inputT2108').value = 20;
-    document.getElementById('triggerReason').value = 'event';
-    document.getElementById('stableStatus').value = 'long';
-    updateDashboard();
-    saveToLocalStorage();
-}
-
-function saveToLocalStorage() {
-    const data = {
-        sp500: document.getElementById('inputSP500').value,
-        ma200: document.getElementById('input200MA').value,
-        vix: document.getElementById('inputVIX').value,
-        spread: document.getElementById('inputSpread').value,
-        sos: document.getElementById('inputSOS').value,
-        t2108: document.getElementById('inputT2108').value,
-        reason: document.getElementById('triggerReason').value,
-        stable: document.getElementById('stableStatus').value
-    };
-    localStorage.setItem('bullBearDashboard', JSON.stringify(data));
-}
-
-function loadFromLocalStorage() {
-    const saved = localStorage.getItem('bullBearDashboard');
-    if (saved) {
-        const data = JSON.parse(saved);
-        document.getElementById('inputSP500').value = data.sp500 || 6506;
-        document.getElementById('input200MA').value = data.ma200 || 6621;
-        document.getElementById('inputVIX').value = data.vix || 25.4;
-        document.getElementById('inputSpread').value = data.spread || 380;
-        document.getElementById('inputSOS').value = data.sos || 0.15;
-        document.getElementById('inputT2108').value = data.t2108 || 20;
-        document.getElementById('triggerReason').value = data.reason || 'event';
-        document.getElementById('stableStatus').value = data.stable || 'long';
-    }
-}
+    </script>
 </body>
 </html>
