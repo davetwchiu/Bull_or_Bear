@@ -34,8 +34,24 @@ def main():
         spread_percent = get_fred_data('BAMLH0A0HYM2', limit=10)[0]
         spread_bp = spread_percent * 100
 
-        # 4. 獲取 Richmond Fed SOS (IURSA)
-        sos = get_fred_data('IURSA', limit=10)[0]
+       # 4. 獲取並計算 Richmond Fed SOS (基於 IURSA 數據)
+        # 官方邏輯：最新 26 週 IURSA 平均值 - 過去 52 週內該 26 週平均值嘅最低點
+        # 需要最少 26 + 52 = 78 週數據，我哋安全起見拎 100 週
+        iursa_history = get_fred_data('IURSA', limit=100)
+        
+        # 計算過去 52 週，每一週嘅 26 週移動平均線 (MA26)
+        # index 0 係最新嗰週
+        ma26_list = []
+        for i in range(52):
+            # iursa_history[i : i+26] 會拎到由第 i 週開始，向後數 26 週嘅歷史數據
+            ma26 = sum(iursa_history[i : i+26]) / 26
+            ma26_list.append(ma26)
+            
+        current_ma26 = ma26_list[0]
+        min_ma26_past_52_weeks = min(ma26_list)
+        
+        # SOS 衰退指標 = 最新 MA26 - 過去一年最低嘅 MA26
+        sos = current_ma26 - min_ma26_past_52_weeks
 
         # 整合輸出 JSON
         live_data = {
