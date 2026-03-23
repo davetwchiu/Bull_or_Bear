@@ -448,6 +448,51 @@ async function fetchLiveRepoData() {
         btn.disabled = false;
     }
 }
+    // ==========================================
+// 6. 自動讀取 GitHub Repo 的 live.json
+// ==========================================
+async function fetchLiveRepoData() {
+    const btn = document.getElementById('btnFetchLive');
+    const originalText = btn.innerHTML;
+    
+    // 撳咗之後轉做 Loading 狀態，防止連撳
+    btn.innerHTML = "⏳ 讀取數據中...";
+    btn.disabled = true;
+
+    try {
+        // 加上時間戳 (?t=...) 防止瀏覽器 Cache 住舊嘅 JSON 檔案
+        const timestamp = new Date().getTime();
+        const response = await fetch(`data/live.json?t=${timestamp}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+
+        // 將自動獲取嘅數據填入左邊嘅 Input 欄位
+        document.getElementById('inputSP500').value = data.sp500;
+        document.getElementById('input200MA').value = data.ma200;
+        document.getElementById('inputVIX').value = data.vix;
+        document.getElementById('inputSpread').value = data.spread;
+        document.getElementById('inputSOS').value = data.sos;
+
+        // 觸發重新計算 UI 同埋儲存落 LocalStorage
+        updateDashboard();
+        saveToLocalStorage();
+
+        // 彈出成功提示，顯示最後更新時間
+        alert(`✅ 成功載入最新市場數據！\n最後更新時間 (UTC): ${data.last_updated}`);
+        
+    } catch (error) {
+        console.error("讀取 live.json 失敗:", error);
+        alert("❌ 無法載入實時數據！\n請確定 GitHub Actions 已經成功運行，並且 data/live.json 檔案存在。");
+    } finally {
+        // 恢復按鈕原本嘅狀態
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
     </script>
 </body>
 </html>
