@@ -414,6 +414,40 @@ function loadFromLocalStorage() {
         document.getElementById('stableStatus').value = data.stable || 'long';
     }
 }
+// 接駁「載入 Repo 即時數據」按鈕
+async function fetchLiveRepoData() {
+    const btn = document.querySelector('.btn-primary');
+    const originalText = btn.innerText;
+    btn.innerText = "⏳ 載入中...";
+    btn.disabled = true;
+
+    try {
+        // 加上時間戳防止瀏覽器 Cache 住舊檔案
+        const response = await fetch(`data/live.json?t=${new Date().getTime()}`);
+        if (!response.ok) throw new Error("無法讀取 live.json");
+        
+        const data = await response.json();
+
+        // 將自動獲取嘅數據填入 Input
+        document.getElementById('inputSP500').value = data.sp500;
+        document.getElementById('input200MA').value = data.ma200;
+        document.getElementById('inputVIX').value = data.vix;
+        document.getElementById('inputSpread').value = data.spread;
+        document.getElementById('inputSOS').value = data.sos;
+
+        // 觸發重新計算UI
+        updateDashboard();
+        saveToLocalStorage();
+
+        alert(`✅ 成功載入自動化數據！\n最後更新時間: ${data.last_updated}`);
+        
+    } catch (error) {
+        alert("❌ 載入失敗！請確保 GitHub Actions 已經成功建立 data/live.json。\n" + error);
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
     </script>
 </body>
 </html>
