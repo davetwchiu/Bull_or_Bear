@@ -21,79 +21,97 @@ def calculate_at50():
     """自家製 $SPXA50R：計算 S&P 500 有幾多 % 股票高於 50天線"""
     print("正在從 Wikipedia 獲取 S&P 500 成份股名單...")
     url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-    
-    # 👇 加入 User-Agent 扮成 Chrome 瀏覽器，破解 Wikipedia 403 阻擋
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     html_data = requests.get(url, headers=headers).text
     table = pd.read_html(html_data)[0]
-    
     tickers = table['Symbol'].tolist()
-    
-    # 修正 Yahoo Finance 格式 (例如 BRK.B 轉 BRK-B)
     tickers = [t.replace('.', '-') for t in tickers]
 
-    print(f"正在下載 {len(tickers)} 隻股票過去 3 個月嘅數據 (需時約 1-2 分鐘)...")
-    # 批量下載數據，過濾走冇用嘅提示訊息
+    print(f"正在下載 {len(tickers)} 隻股票數據 (需時約 1 分鐘)...")
     data = yf.download(tickers, period="3mo", interval="1d", auto_adjust=True, progress=False)['Close']
     
-    # 獲取最新一日嘅收市價
     latest_prices = data.iloc[-1]
-    # 計算過去 50 日嘅移動平均線，並抽最後一日出嚟
     ma50 = data.rolling(window=50).mean().iloc[-1]
     
-    # 比較：最新價 > 50天線
     above_50ma = (latest_prices > ma50).sum()
-    total_valid = latest_prices.notna().sum() # 扣除當日停牌或冇數據嘅股票
+    total_valid = latest_prices.notna().sum()
     
     at50_percent = (above_50ma / total_valid) * 100
-    print(f"AT50 計算完成: {above_50ma} / {total_valid} = {at50_percent:.2f}%")
+    print(f"AT50 計算完成: {at50_percent:.2f}%")
     return round(at50_percent, 2)
 
 def main():
     try:
-        print("正在獲取 FRED 宏觀數據...")
+        # ==========================================
+        # 1. 獲取 S&P 500 (改用 Yahoo Finance 解決 FRED 延遲問題)
+        # ==========================================
+        print("正在從 Yahoo Finance 獲取 S&P 500 最新報價...")
+        # 拎過去 2 年數據，確保有足夠日數計 200MA 同埋回溯
+        spx_data = yf.download('^GSPC', period="2y", interval="1d", progress=False)['Close']
+        spx_data = spx_data.dropna() # 清理空值
         
-        # 1. 獲取 S&P 500 及計算 200天線 / 企穩日數
-        sp500_history = get_fred_data('SP500', limit=600)
-        sp500_current = sp500_history[0]
-        ma200 = sum(sp500_history[:200]) / 200
+        # 將 Series 轉為 1D 陣列 (解決 pandas 新版本警告)
+        if isinstance(spx_data, pd.DataFrame):
+            spx_data = spx_data.squeeze()
 
+        sp500_current = float(spx_data.iloc[-1])
+        
+        # 計算每日的 200天線
+        ma200_series = spx_data.rolling(window=200).mean().dropna()
+        ma200 = float(ma200_series.iloc[-1])
+
+        # 計算企穩日數 (由最新一日開始向過去推算)
         stable_days = 0
         streak_started = False
-        for i in range(250):
-            price = sp500_history[i]
-            historical_ma200 = sum(sp500_history[i : i+200]) / 200
+        
+        # 將數據反轉，由最新日期開始向後 Check
+        prices_reversed = spx_data.loc[ma200_series.index][::-1]
+        ma200_reversed = ma200_series[::-1]
+
+        for i in range(len(prices_reversed)):
+            if i >= 250: # 最多回溯大約 1 年 (250 個交易日)
+                break
+                
+            price = float(prices_reversed.iloc[i])
+            historical_ma200 = float(ma200_reversed.iloc[i])
+            
             if price > historical_ma200:
                 streak_started = True
                 stable_days += 1
             else:
-                if streak_started: break
+                if streak_started:
+                    break
 
-        # 2. VIX 恐慌指數
+        # ==========================================
+        # 2. 獲取 FRED 宏觀數據 (VIX, Spread, SOS)
+        # ==========================================
+        print("正在獲取 FRED 宏觀數據...")
         vix = get_fred_data('VIXCLS', limit=10)[0]
-
-        # 3. High Yield Credit Spread (bp)
+        
         spread_percent = get_fred_data('BAMLH0A0HYM2', limit=10)[0]
         spread_bp = spread_percent * 100
 
-        # 4. Richmond Fed SOS
         iursa_history = get_fred_data('IURSA', limit=100)
         ma26_list = [sum(iursa_history[i : i+26]) / 26 for i in range(52)]
         sos = ma26_list[0] - min(ma26_list)
 
-        # 5. 自家製 AT50 ($SPXA50R)
+        # ==========================================
+        # 3. 自家製 AT50 ($SPXA50R)
+        # ==========================================
         at50_value = calculate_at50()
 
-        # 整合輸出
+        # ==========================================
+        # 4. 整合並輸出 JSON
+        # ==========================================
         live_data = {
             "sp500": round(sp500_current, 2),
             "ma200": round(ma200, 2),
             "vix": round(vix, 2),
             "spread": int(spread_bp),
             "sos": round(sos, 3),
-            "at50": at50_value,       # <--- 新增呢粒數！
+            "at50": at50_value,
             "stable_days": stable_days,
             "last_updated": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
         }
@@ -102,7 +120,7 @@ def main():
         with open('data/live.json', 'w', encoding='utf-8') as f:
             json.dump(live_data, f, indent=4)
             
-        print("✅ 數據更新成功！")
+        print("✅ 數據更新成功！", live_data)
 
     except Exception as e:
         print(f"❌ 獲取數據失敗: {e}")
