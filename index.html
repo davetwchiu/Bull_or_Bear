@@ -154,6 +154,11 @@
                     <span class="timestamp" id="dataTimestamp">🕒 數據: 尚未載入</span>
                 </div>
                 
+                <div class="card" style="padding: 15px 15px 0 15px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: var(--text-muted);">📈 S&P 500 日線圖 (附 200MA)</h4>
+                    <div id="tradingview_spx" style="height: 350px; width: 100%;"></div>
+                </div>
+                
                 <div class="score-board">
                     <div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
@@ -459,5 +464,35 @@
             }
         }
     </script>
+
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script type="text/javascript">
+        new TradingView.widget({
+            "autosize": true,               // 自動適應外框大小
+            "symbol": "SP:SPX",             // S&P 500 指數
+            "interval": "D",                // 日線 (Daily)
+            "timezone": "Asia/Hong_Kong",   // 時區
+            "theme": "light",               // 淺色主題 (配合你個 Dashboard)
+            "style": "1",                   // 1 = 蠟燭圖 (Candles)
+            "locale": "zh_TW",              // 繁體中文
+            "enable_publishing": false,
+            "backgroundColor": "rgba(255, 255, 255, 1)",
+            "gridColor": "rgba(240, 243, 250, 0)", // 隱藏網格線令畫面更簡潔
+            "hide_top_toolbar": true,       // 隱藏頂部工具列
+            "hide_legend": false,
+            "save_image": false,
+            "container_id": "tradingview_spx", // 對應返步驟 1 嘅 div ID
+            // 👇 戲肉：強制加入 200天簡單移動平均線 (SMA)
+            "studies": [
+                {
+                    "id": "MASimple@tv-basicstudies",
+                    "inputs": {
+                        "length": 200       // 設定長度為 200 日
+                    }
+                }
+            ]
+        });
+    </script>
+
 </body>
 </html>
